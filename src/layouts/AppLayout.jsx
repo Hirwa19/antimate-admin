@@ -6,16 +6,14 @@ export default function AppLayout({ children }) {
     <div className="flex min-h-screen bg-slate-950 text-white">
 
       {/* Sidebar */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
+      <Sidebar />
 
-      {/* Main section */}
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
 
         <Navbar />
 
-        <main className="flex-1 w-full p-4 md:p-6 lg:p-8">
+        <main className="flex-1 p-6 overflow-y-auto">
           {children}
         </main>
 

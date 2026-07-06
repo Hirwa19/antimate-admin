@@ -1,36 +1,28 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-
 export default function RoleRoute({
+
     children,
-    allowedRoles
+
+    roles
+
 }){
 
+    const { user } = useAuth();
 
-const {user}=useAuth();
+    if(!user){
 
+        return <Navigate to="/login" replace />;
 
+    }
 
-if(!user){
+    if(!roles.includes(user.role)){
 
- return <Navigate to="/login"/>
+        return <Navigate to="/dashboard" replace />;
 
-}
+    }
 
-
-
-if(!allowedRoles.includes(user.role)){
-
- return (
-  <Navigate to="/dashboard"/>
- );
-
-}
-
-
-
-return children;
-
+    return children;
 
 }

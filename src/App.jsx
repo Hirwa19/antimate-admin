@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import NodeIdentity from "./pages/NodeIdentity";
 import GenerateDevice from "./pages/GenerateDevice";
+import AddWorker from "./pages/AddWorker";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
@@ -18,7 +19,7 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* Default Route */}
+        {/* Default */}
         <Route
           path="/"
           element={<Navigate to="/login" replace />}
@@ -42,7 +43,7 @@ function App() {
           }
         />
 
-        {/* Generate Node Identities */}
+        {/* Generate Node Identity */}
         <Route
           path="/nodes/generate"
           element={
@@ -61,6 +62,18 @@ function App() {
             <ProtectedRoute>
               <AppLayout>
                 <GenerateDevice />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Add Worker */}
+        <Route
+          path="/workers/add"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <AddWorker />
               </AppLayout>
             </ProtectedRoute>
           }
