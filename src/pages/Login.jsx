@@ -34,9 +34,11 @@ export default function Login() {
 res.data
 );
       login(
-        res.data.user,
-        res.data.token
-      );
+  res.data.admin,
+  res.data.token
+);
+
+console.log("Saved admin:", res.data.admin);
 
       console.log("Saved user:", res.data.user);
       console.log("Saved token:", res.data.token);
