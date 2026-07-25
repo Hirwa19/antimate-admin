@@ -12,7 +12,7 @@ import Devices from "./pages/Devices";
 import CreateWorker from "./pages/CreateWorker";
 import AddWorker from "./pages/AddWorker";
 import GenerateDevice from "./pages/GenerateDevice";
-import NodeIdentity from "./pages/NodeIdentity";
+import GenerateGateway from "./pages/GenerateGateway";
 import Settings from "./pages/Settings";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -59,15 +59,14 @@ export default function App() {
             </Protected>
           }
         />
-
-        <Route
-          path="/nodes/generate"
-          element={
-            <Protected>
-              <NodeIdentity />
-            </Protected>
-          }
-        />
+<Route
+  path="/generate-gateway"
+  element={
+    <Protected>
+      <GenerateGateway />
+    </Protected>
+  }
+/>
 
         <Route
           path="/workers"

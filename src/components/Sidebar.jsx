@@ -33,9 +33,9 @@ export default function Sidebar() {
       path: "/generate-device",
     },
     {
-      title: "Node Identity",
+      title: "GenerateGateway",
       icon: <Shield size={20} />,
-      path: "/nodes/generate",
+      path: "/generate-gateway",
     },
     {
       title: "Workers",
