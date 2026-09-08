@@ -1,1061 +1,1176 @@
-import { useEffect, useMemo, useState } from "react";
 import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  Activity,
+  AlertCircle,
   Check,
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
   Copy,
+  Cpu,
   Download,
-  FileText,
-  Plus,
+  Eye,
+  Filter,
+  KeyRound,
+  Link2,
+  Loader2,
+  Package,
   RefreshCw,
   Search,
-  Smartphone,
+  ShieldCheck,
+  Wifi,
+  WifiOff,
   X,
-  XCircle,
 } from "lucide-react";
 
 import api from "../api/axios";
 import { useAppSettings } from "../context/AppSettingsContext";
 
-export default function Devices() {
-  const { language } = useAppSettings();
+// =====================================================
+// HELPERS
+// =====================================================
+
+function getStatus(device) {
+  if (!device) return "INACTIVE";
+
+  if (device.adminStatus) {
+    return String(device.adminStatus).toUpperCase();
+  }
+
+  if (
+    String(device.activationStatus).toUpperCase() ===
+    "BLOCKED"
+  ) {
+    return "BLOCKED";
+  }
+
+  if (
+    String(device.activationStatus).toUpperCase() ===
+    "PENDING_OTP"
+  ) {
+    return "PENDING";
+  }
+
+  if (
+    String(device.activationStatus).toUpperCase() ===
+      "ACTIVE" &&
+    device.online === true
+  ) {
+    return "ACTIVE";
+  }
+
+  if (
+    String(device.activationStatus).toUpperCase() ===
+      "ACTIVE" &&
+    device.online === false
+  ) {
+    return "OFFLINE";
+  }
+
+  if (
+    String(device.activationStatus).toUpperCase() ===
+    "READY"
+  ) {
+    return "READY";
+  }
+
+  return "INACTIVE";
+}
+
+function getOwnerName(device) {
+  if (!device?.owner) {
+    return null;
+  }
+
+  if (typeof device.owner === "string") {
+    return device.owner;
+  }
+
+  return (
+    device.owner.fullName ||
+    device.owner.name ||
+    device.owner.email ||
+    device.owner.phone ||
+    null
+  );
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleString();
+}
+
+function formatRelativeDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  const diff =
+    Date.now() - date.getTime();
+
+  const minutes = Math.floor(
+    diff / 60000
+  );
+
+  if (minutes < 1) {
+    return "Just now";
+  }
+
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+
+  const hours = Math.floor(
+    minutes / 60
+  );
+
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(
+    hours / 24
+  );
+
+  if (days < 30) {
+    return `${days}d ago`;
+  }
+
+  return date.toLocaleDateString();
+}
+
+function getStatusClass(status) {
+  switch (status) {
+    case "ACTIVE":
+      return "status-active";
+
+    case "OFFLINE":
+      return "status-offline";
+
+    case "READY":
+      return "status-ready";
+
+    case "PENDING":
+      return "status-pending";
+
+    case "BLOCKED":
+      return "status-blocked";
+
+    default:
+      return "status-inactive";
+  }
+}
+
+function getStatusText(status, language) {
   const rw = language === "rw";
 
-  const [devices, setDevices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(null);
-
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
-
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const [copied, setCopied] = useState("");
-
-  const text = {
-    title: rw ? "BR Systems / Devices" : "BR Systems / Devices",
-    subtitle: rw
-      ? "Genzura kandi ucunge devices za ANTIMATE."
-      : "Manage and monitor ANTIMATE devices.",
-
-    generate: rw ? "Generate Device Nshya" : "Generate New Device",
-    generating: rw ? "Birimo gukorwa..." : "Generating...",
-
-    refresh: rw ? "Refresh" : "Refresh",
-    search: rw ? "Shakisha device..." : "Search devices...",
-
-    all: rw ? "Zose" : "All",
-    active: rw ? "Activated" : "Activated",
-    inactive: rw ? "Inactive" : "Inactive",
-    pending: rw ? "Pending" : "Pending",
-
-    deviceId: "Device ID",
-    status: rw ? "Status" : "Status",
-    owner: rw ? "Nyirayo" : "Owner",
-    created: rw ? "Yakozwe" : "Created",
-    lastSeen: rw ? "Last seen" : "Last seen",
-    label: rw ? "Label" : "Label",
-    action: rw ? "Action" : "Action",
-
-    noDevices: rw ? "Nta devices zabonetse." : "No devices found.",
-    loading: rw ? "Birimo gufunguka..." : "Loading devices...",
-
-    details: rw ? "Device Details" : "Device Details",
-    close: rw ? "Funga" : "Close",
-    copy: rw ? "Copy" : "Copy",
-    copied: rw ? "Byakoporowe" : "Copied",
-
-    download: rw ? "Download PDF" : "Download PDF",
-
-    notAssigned: rw ? "Ntabwo yashyizwe kuri user" : "Not assigned",
-
-    generated: rw
-      ? "Device yakozwe neza."
-      : "Device generated successfully.",
-
-    generationFailed: rw
-      ? "Device ntiyashoboye gukorwa."
-      : "Device generation failed.",
-
-    loadFailed: rw
-      ? "Devices ntizashoboye gufunguka."
-      : "Failed to load devices.",
-
-    sort: rw ? "Sort" : "Sort",
-    newest: rw ? "Nshya mbere" : "Newest first",
-    oldest: rw ? "Zishaje mbere" : "Oldest first",
-    idAsc: rw ? "Device ID A-Z" : "Device ID A-Z",
-    idDesc: rw ? "Device ID Z-A" : "Device ID Z-A",
-
-    deviceCount: rw ? "devices" : "devices",
-    activeDevices: rw ? "activated" : "activated",
+  const map = {
+    ACTIVE: rw ? "Iri gukora" : "Active",
+    OFFLINE: rw ? "Ntiri online" : "Offline",
+    READY: rw ? "Yiteguye" : "Ready",
+    PENDING: rw ? "Irategereje" : "Pending",
+    BLOCKED: rw ? "Yahagaritswe" : "Blocked",
+    INACTIVE: rw ? "Ntidakora" : "Inactive",
   };
+
+  return (
+    map[status] ||
+    status
+  );
+}
+
+// =====================================================
+// STAT CARD
+// =====================================================
+
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+  description,
+  type,
+}) {
+  return (
+    <div className="device-stat-item">
+      <div className={`device-stat-icon ${type || ""}`}>
+        <Icon size={19} />
+      </div>
+
+      <div className="device-stat-content">
+        <div className="device-stat-label">
+          {label}
+        </div>
+
+        <div className="device-stat-value">
+          {value}
+        </div>
+
+        {description && (
+          <div className="device-stat-description">
+            {description}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// STATUS BADGE
+// =====================================================
+
+function StatusBadge({
+  status,
+  language,
+}) {
+  return (
+    <span
+      className={`device-status ${getStatusClass(
+        status
+      )}`}
+    >
+      <span className="device-status-dot" />
+
+      {getStatusText(
+        status,
+        language
+      )}
+    </span>
+  );
+}
+
+// =====================================================
+// EMPTY STATE
+// =====================================================
+
+function EmptyState({
+  hasFilters,
+  language,
+}) {
+  const rw = language === "rw";
+
+  return (
+    <div className="device-empty">
+      <div className="device-empty-icon">
+        <Package size={28} />
+      </div>
+
+      <h3>
+        {hasFilters
+          ? rw
+            ? "Nta device yabonetse"
+            : "No devices found"
+          : rw
+          ? "Nta devices zirahari"
+          : "No devices yet"}
+      </h3>
+
+      <p>
+        {hasFilters
+          ? rw
+            ? "Gerageza guhindura search cyangwa filter."
+            : "Try changing your search or filter."
+          : rw
+          ? "Devices zakozwe zizagaragara hano."
+          : "Generated devices will appear here."}
+      </p>
+    </div>
+  );
+}
+
+// =====================================================
+// MAIN
+// =====================================================
+
+export default function Devices() {
+  const { language } =
+    useAppSettings();
+
+  const rw = language === "rw";
+
+  // ===================================================
+  // DATA
+  // ===================================================
+
+  const [devices, setDevices] =
+    useState([]);
+
+  const [stats, setStats] =
+    useState({
+      total: 0,
+      active: 0,
+      online: 0,
+      offline: 0,
+      ready: 0,
+      pending: 0,
+      blocked: 0,
+      claimed: 0,
+      unclaimed: 0,
+      enabled: 0,
+      disabled: 0,
+    });
+
+  // ===================================================
+  // UI STATE
+  // ===================================================
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [statsLoading, setStatsLoading] =
+    useState(true);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [searchInput, setSearchInput] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [status, setStatus] =
+    useState("ALL");
+
+  const [sort, setSort] =
+    useState("newest");
+
+  const [page, setPage] =
+    useState(1);
+
+  const [limit] =
+    useState(25);
+
+  const [pagination, setPagination] =
+    useState({
+      page: 1,
+      limit: 25,
+      total: 0,
+      pages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    });
+
+  // ===================================================
+  // DETAIL
+  // ===================================================
+
+  const [selectedDevice, setSelectedDevice] =
+    useState(null);
+
+  const [detailLoading, setDetailLoading] =
+    useState(false);
+
+  const [detailError, setDetailError] =
+    useState("");
+
+  // ===================================================
+  // COPY
+  // ===================================================
+
+  const [copied, setCopied] =
+    useState("");
+
+  // ===================================================
+  // PDF
+  // ===================================================
+
+  const [pdfLoading, setPdfLoading] =
+    useState("");
+
+  // ===================================================
+  // LOAD DEVICES
+  // ===================================================
+
+  const loadDevices = useCallback(
+    async ({
+      showRefresh = false,
+    } = {}) => {
+      try {
+        if (showRefresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
+        setError("");
+
+        const params = {
+          page,
+          limit,
+          sort,
+        };
+
+        if (search.trim()) {
+          params.search =
+            search.trim();
+        }
+
+        if (status !== "ALL") {
+          params.status =
+            status;
+        }
+
+        const response =
+          await api.get(
+            "/devices",
+            {
+              params,
+            }
+          );
+
+        const data =
+          response?.data || {};
+
+        const list = Array.isArray(
+          data.devices
+        )
+          ? data.devices
+          : Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data)
+          ? data
+          : [];
+
+        setDevices(list);
+
+        if (data.pagination) {
+          setPagination(
+            data.pagination
+          );
+        } else {
+          setPagination({
+            page,
+            limit,
+            total: list.length,
+            pages: 1,
+            hasNextPage: false,
+            hasPreviousPage:
+              page > 1,
+          });
+        }
+      } catch (err) {
+        console.error(
+          "LOAD DEVICES ERROR:",
+          err
+        );
+
+        const message =
+          err?.response?.data?.message ||
+          err?.message ||
+          (rw
+            ? "Devices ntizashoboye kuboneka."
+            : "Failed to load devices.");
+
+        setError(message);
+
+        setDevices([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [
+      page,
+      limit,
+      sort,
+      search,
+      status,
+      rw,
+    ]
+  );
+
+  // ===================================================
+  // LOAD STATS
+  // ===================================================
+
+  const loadStats =
+    useCallback(async () => {
+      try {
+        setStatsLoading(true);
+
+        const response =
+          await api.get(
+            "/devices/stats"
+          );
+
+        const data =
+          response?.data || {};
+
+        const serverStats =
+          data.stats ||
+          data.data ||
+          {};
+
+        setStats({
+          total:
+            Number(
+              serverStats.total || 0
+            ),
+
+          active:
+            Number(
+              serverStats.active || 0
+            ),
+
+          online:
+            Number(
+              serverStats.online ??
+                serverStats.active ??
+                0
+            ),
+
+          offline:
+            Number(
+              serverStats.offline || 0
+            ),
+
+          ready:
+            Number(
+              serverStats.ready || 0
+            ),
+
+          pending:
+            Number(
+              serverStats.pending || 0
+            ),
+
+          blocked:
+            Number(
+              serverStats.blocked || 0
+            ),
+
+          claimed:
+            Number(
+              serverStats.claimed || 0
+            ),
+
+          unclaimed:
+            Number(
+              serverStats.unclaimed || 0
+            ),
+
+          enabled:
+            Number(
+              serverStats.enabled || 0
+            ),
+
+          disabled:
+            Number(
+              serverStats.disabled || 0
+            ),
+        });
+      } catch (err) {
+        console.error(
+          "LOAD DEVICE STATS ERROR:",
+          err
+        );
+      } finally {
+        setStatsLoading(false);
+      }
+    }, []);
+
+  // ===================================================
+  // INITIAL LOAD / FILTER CHANGE
+  // ===================================================
 
   useEffect(() => {
     loadDevices();
-  }, []);
+  }, [loadDevices]);
 
-  async function loadDevices() {
-    try {
-      setLoading(true);
-      setError("");
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
-      const res = await api.get("/devices/my-devices");
+  // ===================================================
+  // SEARCH DEBOUNCE
+  // ===================================================
 
-      console.log("DEVICES:", res.data);
+  useEffect(() => {
+    const timer =
+      setTimeout(() => {
+        setPage(1);
+        setSearch(
+          searchInput.trim()
+        );
+      }, 450);
 
-      const data =
-        Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.devices)
-          ? res.data.devices
-          : Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
+    return () =>
+      clearTimeout(timer);
+  }, [searchInput]);
 
-      setDevices(data);
-    } catch (err) {
-      console.error("LOAD DEVICES ERROR:", err);
+  // ===================================================
+  // STATUS CHANGE
+  // ===================================================
 
-      setError(
-        err.response?.data?.message ||
-          text.loadFailed
+  const handleStatusChange =
+    (value) => {
+      setStatus(value);
+      setPage(1);
+    };
+
+  // ===================================================
+  // SORT CHANGE
+  // ===================================================
+
+  const handleSortChange =
+    (value) => {
+      setSort(value);
+      setPage(1);
+    };
+
+  // ===================================================
+  // REFRESH
+  // ===================================================
+
+  const refreshAll = async () => {
+    await Promise.all([
+      loadDevices({
+        showRefresh: true,
+      }),
+      loadStats(),
+    ]);
+  };
+
+  // ===================================================
+  // OPEN DETAIL
+  // ===================================================
+
+  const openDevice =
+    async (device) => {
+      if (!device?.deviceId) {
+        return;
+      }
+
+      setSelectedDevice(
+        device
       );
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  async function generateDevice() {
-    try {
-      setGenerating(true);
-      setError("");
-      setSuccess("");
+      setDetailError("");
 
-      const res = await api.post("/devices/register", {});
+      try {
+        setDetailLoading(true);
 
-      console.log("NEW DEVICE:", res.data);
+        const response =
+          await api.get(
+            `/devices/${encodeURIComponent(
+              device.deviceId
+            )}`
+          );
 
-      setSuccess(text.generated);
+        const data =
+          response?.data || {};
 
-      await loadDevices();
-    } catch (err) {
-      console.error(
-        "GENERATE DEVICE ERROR:",
-        err.response?.data || err
-      );
-
-      setError(
-        err.response?.data?.message ||
-          text.generationFailed
-      );
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function downloadLabel(device) {
-    if (!device?.deviceId) return;
-
-    try {
-      setPdfLoading(device.deviceId);
-      setError("");
-
-      const res = await api.get(
-        `/devices/label/${device.deviceId}`,
-        {
-          responseType: "blob",
+        if (data.device) {
+          setSelectedDevice(
+            data.device
+          );
         }
-      );
+      } catch (err) {
+        console.error(
+          "DEVICE DETAIL ERROR:",
+          err
+        );
 
-      const blob = new Blob([res.data], {
-        type: "application/pdf",
-      });
+        setDetailError(
+          err?.response?.data
+            ?.message ||
+            (rw
+              ? "Amakuru ya device ntiyabonetse."
+              : "Failed to load device details.")
+        );
+      } finally {
+        setDetailLoading(false);
+      }
+    };
 
-      const url = window.URL.createObjectURL(blob);
+  // ===================================================
+  // CLOSE DETAIL
+  // ===================================================
 
-      const link = document.createElement("a");
+  const closeDevice = () => {
+    setSelectedDevice(null);
+    setDetailError("");
+    setCopied("");
+  };
 
-      link.href = url;
-      link.download = `${device.deviceId}-label.pdf`;
+  // ===================================================
+  // COPY
+  // ===================================================
 
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF DOWNLOAD ERROR:", err);
-
-      setError(
-        err.response?.data?.message ||
-          "Failed to download PDF."
-      );
-    } finally {
-      setPdfLoading(null);
-    }
-  }
-
-  async function copyValue(value, type) {
+  const copyValue = async (
+    value,
+    key
+  ) => {
     if (!value) return;
 
     try {
-      await navigator.clipboard.writeText(String(value));
+      await navigator.clipboard.writeText(
+        String(value)
+      );
 
-      setCopied(type);
+      setCopied(key);
 
       setTimeout(() => {
         setCopied("");
       }, 1800);
     } catch (err) {
-      console.error("COPY ERROR:", err);
+      console.error(
+        "COPY ERROR:",
+        err
+      );
     }
-  }
+  };
 
-  function normalizeStatus(device) {
-    const raw =
-      device?.activationStatus ||
-      device?.status ||
-      device?.state ||
-      "";
+  // ===================================================
+  // DOWNLOAD PDF
+  // ===================================================
 
-    return String(raw).toLowerCase();
-  }
+  const downloadLabel =
+    async (deviceId) => {
+      if (!deviceId) return;
 
-  function getStatusLabel(device) {
-    const status = normalizeStatus(device);
-
-    if (
-      status.includes("active") ||
-      status.includes("activated") ||
-      status.includes("online")
-    ) {
-      return "ACTIVE";
-    }
-
-    if (
-      status.includes("pending") ||
-      status.includes("waiting")
-    ) {
-      return "PENDING";
-    }
-
-    return "INACTIVE";
-  }
-
-  function getStatusClass(device) {
-    const status = getStatusLabel(device);
-
-    if (status === "ACTIVE") return "device-status active";
-    if (status === "PENDING") return "device-status pending";
-
-    return "device-status inactive";
-  }
-
-  function getOwner(device) {
-    if (!device) return text.notAssigned;
-
-    if (typeof device.owner === "string") {
-      return device.owner || text.notAssigned;
-    }
-
-    if (device.owner?.name) {
-      return device.owner.name;
-    }
-
-    if (device.owner?.fullName) {
-      return device.owner.fullName;
-    }
-
-    if (device.owner?.email) {
-      return device.owner.email;
-    }
-
-    if (device.user?.name) {
-      return device.user.name;
-    }
-
-    if (device.user?.email) {
-      return device.user.email;
-    }
-
-    return text.notAssigned;
-  }
-
-  function formatDate(value) {
-    if (!value) return "—";
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return String(value);
-    }
-
-    return date.toLocaleDateString(
-      rw ? "rw-RW" : "en-US",
-      {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }
-    );
-  }
-
-  const filteredDevices = useMemo(() => {
-    let result = [...devices];
-
-    const query = search.trim().toLowerCase();
-
-    if (query) {
-      result = result.filter((device) => {
-        const deviceId =
-          String(device?.deviceId || "").toLowerCase();
-
-        const owner =
-          String(getOwner(device) || "").toLowerCase();
-
-        const status =
-          String(
-            device?.activationStatus ||
-              device?.status ||
-              ""
-          ).toLowerCase();
-
-        return (
-          deviceId.includes(query) ||
-          owner.includes(query) ||
-          status.includes(query)
+      try {
+        setPdfLoading(
+          deviceId
         );
-      });
-    }
 
-    if (statusFilter !== "all") {
-      result = result.filter((device) => {
-        return (
-          getStatusLabel(device).toLowerCase() ===
-          statusFilter
+        const response =
+          await api.get(
+            `/devices/label/${encodeURIComponent(
+              deviceId
+            )}`,
+            {
+              responseType:
+                "blob",
+            }
+          );
+
+        const blob =
+          new Blob(
+            [response.data],
+            {
+              type:
+                "application/pdf",
+            }
+          );
+
+        const url =
+          window.URL.createObjectURL(
+            blob
+          );
+
+        const link =
+          document.createElement(
+            "a"
+          );
+
+        link.href = url;
+
+        link.download =
+          `${deviceId}-label.pdf`;
+
+        document.body.appendChild(
+          link
         );
-      });
-    }
 
-    result.sort((a, b) => {
-      if (sortBy === "idAsc") {
-        return String(a.deviceId || "").localeCompare(
-          String(b.deviceId || "")
+        link.click();
+
+        link.remove();
+
+        window.URL.revokeObjectURL(
+          url
         );
-      }
-
-      if (sortBy === "idDesc") {
-        return String(b.deviceId || "").localeCompare(
-          String(a.deviceId || "")
+      } catch (err) {
+        console.error(
+          "DOWNLOAD LABEL ERROR:",
+          err
         );
+
+        alert(
+          err?.response?.data
+            ?.message ||
+            (rw
+              ? "PDF ntiyashoboye gukururwa."
+              : "Failed to download PDF.")
+        );
+      } finally {
+        setPdfLoading("");
       }
-
-      const dateA = new Date(
-        a.createdAt || a.created || 0
-      ).getTime();
-
-      const dateB = new Date(
-        b.createdAt || b.created || 0
-      ).getTime();
-
-      if (sortBy === "oldest") {
-        return dateA - dateB;
-      }
-
-      return dateB - dateA;
-    });
-
-    return result;
-  }, [devices, search, statusFilter, sortBy]);
-
-  const stats = useMemo(() => {
-    const active = devices.filter(
-      (device) => getStatusLabel(device) === "ACTIVE"
-    ).length;
-
-    const pending = devices.filter(
-      (device) => getStatusLabel(device) === "PENDING"
-    ).length;
-
-    const inactive = devices.length - active - pending;
-
-    return {
-      total: devices.length,
-      active,
-      pending,
-      inactive,
     };
-  }, [devices]);
+
+  // ===================================================
+  // PAGE CONTROLS
+  // ===================================================
+
+  const canPrevious =
+    pagination.hasPreviousPage ||
+    page > 1;
+
+  const canNext =
+    pagination.hasNextPage ||
+    page <
+      (pagination.pages || 1);
+
+  const startItem =
+    pagination.total === 0
+      ? 0
+      : (page - 1) *
+          limit +
+        1;
+
+  const endItem =
+    Math.min(
+      page * limit,
+      pagination.total
+    );
+
+  // ===================================================
+  // FILTER STATUS COUNTS
+  // ===================================================
+
+  const visibleStatusCount =
+    useMemo(() => {
+      return {
+        ALL: stats.total,
+        ACTIVE: stats.active,
+        OFFLINE: stats.offline,
+        READY: stats.ready,
+        PENDING: stats.pending,
+        BLOCKED: stats.blocked,
+      };
+    }, [stats]);
+
+  // ===================================================
+  // FILTER ACTIVE
+  // ===================================================
+
+  const hasFilters =
+    Boolean(search.trim()) ||
+    status !== "ALL";
+
+  // ===================================================
+  // RENDER
+  // ===================================================
 
   return (
-    <>
-      <div className="devices-page">
-        <div className="devices-header">
-          <div>
-            <div className="page-kicker">
-              <Smartphone size={15} />
-              ANTIMATE EDGE
-            </div>
-
-            <h1>{text.title}</h1>
-
-            <p>{text.subtitle}</p>
-          </div>
-
-          <div className="header-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={loadDevices}
-              disabled={loading}
-            >
-              <RefreshCw
-                size={17}
-                className={loading ? "spin" : ""}
-              />
-              {text.refresh}
-            </button>
-
-            <button
-              type="button"
-              className="primary-button"
-              onClick={generateDevice}
-              disabled={generating}
-            >
-              <Plus size={18} />
-
-              {generating
-                ? text.generating
-                : text.generate}
-            </button>
-          </div>
-        </div>
-
-        <div className="device-summary">
-          <SummaryItem
-            label={rw ? "Total" : "Total"}
-            value={stats.total}
-          />
-
-          <SummaryItem
-            label={text.active}
-            value={stats.active}
-            status="active"
-          />
-
-          <SummaryItem
-            label={text.pending}
-            value={stats.pending}
-            status="pending"
-          />
-
-          <SummaryItem
-            label={text.inactive}
-            value={stats.inactive}
-            status="inactive"
-          />
-        </div>
-
-        {success && (
-          <div className="message success-message">
-            <Check size={18} />
-            <span>{success}</span>
-
-            <button
-              type="button"
-              onClick={() => setSuccess("")}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div className="message error-message">
-            <XCircle size={18} />
-            <span>{error}</span>
-
-            <button
-              type="button"
-              onClick={() => setError("")}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
-
-        <div className="devices-toolbar">
-          <div className="search-box">
-            <Search size={18} />
-
-            <input
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              placeholder={text.search}
-            />
-
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="clear-search"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
-
-          <div className="toolbar-right">
-            <div className="filter-group">
-              {[
-                ["all", text.all],
-                ["active", text.active],
-                ["pending", text.pending],
-                ["inactive", text.inactive],
-              ].map(([value, label]) => (
-                <button
-                  type="button"
-                  key={value}
-                  className={
-                    statusFilter === value
-                      ? "filter-button selected"
-                      : "filter-button"
-                  }
-                  onClick={() =>
-                    setStatusFilter(value)
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <label className="sort-select">
-              <span>{text.sort}</span>
-
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(e.target.value)
-                }
-              >
-                <option value="newest">
-                  {text.newest}
-                </option>
-
-                <option value="oldest">
-                  {text.oldest}
-                </option>
-
-                <option value="idAsc">
-                  {text.idAsc}
-                </option>
-
-                <option value="idDesc">
-                  {text.idDesc}
-                </option>
-              </select>
-
-              <ChevronDown size={15} />
-            </label>
-          </div>
-        </div>
-
-        <div className="devices-list">
-          <div className="devices-list-header">
-            <span>{text.deviceId}</span>
-            <span>{text.status}</span>
-            <span>{text.owner}</span>
-            <span>{text.created}</span>
-            <span>{text.lastSeen}</span>
-            <span>{text.action}</span>
-          </div>
-
-          {loading ? (
-            <div className="empty-state">
-              <RefreshCw
-                size={24}
-                className="spin"
-              />
-
-              <p>{text.loading}</p>
-            </div>
-          ) : filteredDevices.length === 0 ? (
-            <div className="empty-state">
-              <Smartphone size={30} />
-
-              <h3>{text.noDevices}</h3>
-
-              <p>
-                {search || statusFilter !== "all"
-                  ? rw
-                    ? "Gerageza guhindura search cyangwa filter."
-                    : "Try changing your search or filter."
-                  : rw
-                  ? "Nta device iraboneka kuri ubu."
-                  : "There are no devices available yet."}
-              </p>
-            </div>
-          ) : (
-            filteredDevices.map((device) => (
-              <div
-                className="device-row"
-                key={
-                  device._id ||
-                  device.deviceId
-                }
-              >
-                <button
-                  type="button"
-                  className="device-id-button"
-                  onClick={() =>
-                    setSelectedDevice(device)
-                  }
-                >
-                  <span className="device-icon">
-                    <Smartphone size={17} />
-                  </span>
-
-                  <span>
-                    {device.deviceId || "—"}
-                  </span>
-                </button>
-
-                <div>
-                  <span className={getStatusClass(device)}>
-                    <span className="status-dot" />
-                    {getStatusLabel(device)}
-                  </span>
-                </div>
-
-                <div className="owner-cell">
-                  {getOwner(device)}
-                </div>
-
-                <div className="date-cell">
-                  {formatDate(
-                    device.createdAt ||
-                      device.created
-                  )}
-                </div>
-
-                <div className="date-cell">
-                  {formatDate(
-                    device.lastSeen ||
-                      device.lastSeenAt ||
-                      device.updatedAt
-                  )}
-                </div>
-
-                <div className="row-actions">
-                  <button
-                    type="button"
-                    title={text.details}
-                    onClick={() =>
-                      setSelectedDevice(device)
-                    }
-                  >
-                    <FileText size={17} />
-                  </button>
-
-                  <button
-                    type="button"
-                    title={text.download}
-                    onClick={() =>
-                      downloadLabel(device)
-                    }
-                    disabled={
-                      pdfLoading === device.deviceId
-                    }
-                  >
-                    {pdfLoading ===
-                    device.deviceId ? (
-                      <RefreshCw
-                        size={17}
-                        className="spin"
-                      />
-                    ) : (
-                      <Download size={17} />
-                    )}
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {!loading &&
-          filteredDevices.length > 0 && (
-            <div className="devices-footer">
-              <span>
-                {filteredDevices.length}{" "}
-                {text.deviceCount}
-              </span>
-
-              {filteredDevices.length !==
-                devices.length && (
-                <span>
-                  {rw
-                    ? `muri ${devices.length} zose`
-                    : `of ${devices.length} total`}
-                </span>
-              )}
-            </div>
-          )}
-      </div>
-
-      {selectedDevice && (
-        <DeviceDetails
-          device={selectedDevice}
-          rw={rw}
-          text={text}
-          copied={copied}
-          onCopy={copyValue}
-          onDownload={downloadLabel}
-          onClose={() =>
-            setSelectedDevice(null)
-          }
-          pdfLoading={pdfLoading}
-          getOwner={getOwner}
-          getStatusClass={getStatusClass}
-          getStatusLabel={getStatusLabel}
-          formatDate={formatDate}
-        />
-      )}
-
+    <div className="admin-page devices-page">
       <style>{`
         .devices-page {
           width: 100%;
           max-width: 1500px;
           margin: 0 auto;
-          color: var(--admin-text);
         }
 
         .devices-header {
           display: flex;
-          align-items: flex-end;
+          align-items: flex-start;
           justify-content: space-between;
-          gap: 24px;
+          gap: 20px;
           margin-bottom: 24px;
         }
 
-        .page-kicker {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          color: var(--admin-accent);
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: .12em;
-          margin-bottom: 8px;
+        .devices-header-copy {
+          min-width: 0;
         }
 
-        .devices-header h1 {
+        .devices-title {
           margin: 0;
-          font-size: 30px;
+          color: var(--admin-text);
+          font-size: clamp(24px, 3vw, 32px);
           line-height: 1.15;
-          letter-spacing: -.03em;
+          font-weight: 800;
+          letter-spacing: -0.02em;
         }
 
-        .devices-header p {
+        .devices-subtitle {
           margin: 8px 0 0;
           color: var(--admin-text-muted);
           font-size: 14px;
+          line-height: 1.6;
         }
 
-        .header-actions {
-          display: flex;
-          gap: 10px;
-          flex-shrink: 0;
-        }
-
-        .primary-button,
-        .secondary-button {
-          height: 42px;
-          border-radius: 10px;
-          padding: 0 16px;
+        .devices-refresh-button {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          font-weight: 700;
-          font-size: 13px;
-          cursor: pointer;
-          transition: .18s ease;
-        }
-
-        .primary-button {
-          border: 1px solid var(--admin-accent);
-          background: var(--admin-accent);
-          color: #fff;
-        }
-
-        .primary-button:hover {
-          filter: brightness(1.08);
-        }
-
-        .secondary-button {
+          min-height: 42px;
+          padding: 0 15px;
           border: 1px solid var(--admin-border);
+          border-radius: 10px;
           background: var(--admin-surface);
           color: var(--admin-text);
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 700;
+          transition: 0.2s ease;
+          white-space: nowrap;
         }
 
-        .secondary-button:hover {
-          background: var(--admin-surface-subtle);
+        .devices-refresh-button:hover {
+          border-color: var(--admin-accent);
+          color: var(--admin-accent);
         }
 
-        .primary-button:disabled,
-        .secondary-button:disabled {
-          opacity: .55;
+        .devices-refresh-button:disabled {
+          opacity: 0.6;
           cursor: not-allowed;
         }
 
-        .device-summary {
+        .devices-refresh-spin {
+          animation: devices-spin 0.9s linear infinite;
+        }
+
+        @keyframes devices-spin {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .device-stats {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           border: 1px solid var(--admin-border);
-          border-radius: 12px;
+          border-radius: 14px;
           overflow: hidden;
           background: var(--admin-surface);
           margin-bottom: 20px;
         }
 
-        .summary-item {
-          min-height: 86px;
-          padding: 18px 20px;
-          border-right: 1px solid var(--admin-border);
+        .device-stat-item {
+          min-width: 0;
           display: flex;
-          flex-direction: column;
-          justify-content: center;
+          align-items: center;
+          gap: 13px;
+          padding: 18px;
+          border-right: 1px solid var(--admin-border);
         }
 
-        .summary-item:last-child {
+        .device-stat-item:nth-child(4n) {
           border-right: 0;
         }
 
-        .summary-label {
+        .device-stat-icon {
+          width: 40px;
+          height: 40px;
+          flex: 0 0 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 10px;
+          background: var(--admin-accent-soft);
+          color: var(--admin-accent);
+        }
+
+        .device-stat-icon.online {
+          color: #22c55e;
+          background: rgba(34, 197, 94, 0.12);
+        }
+
+        .device-stat-icon.offline {
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.12);
+        }
+
+        .device-stat-icon.ready {
+          color: #3b82f6;
+          background: rgba(59, 130, 246, 0.12);
+        }
+
+        .device-stat-content {
+          min-width: 0;
+        }
+
+        .device-stat-label {
           color: var(--admin-text-muted);
           font-size: 12px;
-          margin-bottom: 5px;
+          font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .summary-value {
-          font-size: 25px;
+        .device-stat-value {
+          margin-top: 3px;
+          color: var(--admin-text);
+          font-size: 23px;
           font-weight: 800;
-          letter-spacing: -.03em;
+          line-height: 1.1;
         }
 
-        .summary-item.active .summary-value {
-          color: #22c55e;
-        }
-
-        .summary-item.pending .summary-value {
-          color: #f59e0b;
-        }
-
-        .summary-item.inactive .summary-value {
-          color: #ef4444;
-        }
-
-        .message {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-height: 46px;
-          border-radius: 10px;
-          padding: 10px 13px;
-          margin-bottom: 15px;
-          font-size: 13px;
-        }
-
-        .message span {
-          flex: 1;
-        }
-
-        .message button {
-          border: 0;
-          background: transparent;
-          color: inherit;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-        }
-
-        .success-message {
-          background: rgba(34,197,94,.10);
-          border: 1px solid rgba(34,197,94,.25);
-          color: #4ade80;
-        }
-
-        .error-message {
-          background: rgba(239,68,68,.10);
-          border: 1px solid rgba(239,68,68,.25);
-          color: #f87171;
+        .device-stat-description {
+          margin-top: 4px;
+          color: var(--admin-text-muted);
+          font-size: 11px;
         }
 
         .devices-toolbar {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          gap: 16px;
+          gap: 10px;
+          flex-wrap: wrap;
           margin-bottom: 12px;
         }
 
-        .search-box {
-          width: min(390px, 100%);
-          height: 42px;
+        .devices-search {
+          flex: 1 1 320px;
+          position: relative;
+          min-width: 220px;
+        }
+
+        .devices-search-icon {
+          position: absolute;
+          left: 13px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--admin-text-muted);
+          pointer-events: none;
+        }
+
+        .devices-search input {
+          width: 100%;
+          height: 43px;
+          box-sizing: border-box;
+          padding: 0 42px 0 40px;
+          border: 1px solid var(--admin-border);
+          border-radius: 10px;
+          outline: none;
+          background: var(--admin-surface);
+          color: var(--admin-text);
+          font-size: 13px;
+        }
+
+        .devices-search input::placeholder {
+          color: var(--admin-text-muted);
+        }
+
+        .devices-search input:focus {
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px var(--admin-accent-soft);
+        }
+
+        .devices-search-clear {
+          position: absolute;
+          right: 9px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 27px;
+          height: 27px;
+          border: 0;
+          border-radius: 7px;
+          background: transparent;
+          color: var(--admin-text-muted);
+          cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 9px;
+          justify-content: center;
+        }
+
+        .devices-search-clear:hover {
+          background: var(--admin-surface-subtle);
+          color: var(--admin-text);
+        }
+
+        .device-select {
+          height: 43px;
+          min-width: 155px;
+          padding: 0 12px;
+          border: 1px solid var(--admin-border);
+          border-radius: 10px;
+          outline: none;
+          background: var(--admin-surface);
+          color: var(--admin-text);
+          font-size: 13px;
+          cursor: pointer;
+        }
+
+        .device-select:focus {
+          border-color: var(--admin-accent);
+        }
+
+        .device-filter-label {
+          height: 43px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
           padding: 0 12px;
           border: 1px solid var(--admin-border);
           border-radius: 10px;
           background: var(--admin-surface);
           color: var(--admin-text-muted);
-        }
-
-        .search-box input {
-          width: 100%;
-          border: 0;
-          outline: 0;
-          background: transparent;
-          color: var(--admin-text);
-          font-size: 13px;
-        }
-
-        .search-box input::placeholder {
-          color: var(--admin-text-muted);
-        }
-
-        .clear-search {
-          border: 0;
-          background: transparent;
-          color: var(--admin-text-muted);
-          cursor: pointer;
-          display: flex;
-        }
-
-        .toolbar-right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .filter-group {
-          display: flex;
-          align-items: center;
-          border: 1px solid var(--admin-border);
-          border-radius: 10px;
-          overflow: hidden;
-          background: var(--admin-surface);
-        }
-
-        .filter-button {
-          border: 0;
-          border-right: 1px solid var(--admin-border);
-          background: transparent;
-          color: var(--admin-text-muted);
-          padding: 10px 12px;
           font-size: 12px;
           font-weight: 700;
-          cursor: pointer;
         }
 
-        .filter-button:last-child {
-          border-right: 0;
-        }
-
-        .filter-button:hover,
-        .filter-button.selected {
-          background: var(--admin-surface-subtle);
-          color: var(--admin-text);
-        }
-
-        .filter-button.selected {
-          color: var(--admin-accent);
-        }
-
-        .sort-select {
-          position: relative;
-          height: 42px;
-          display: flex;
-          align-items: center;
-          gap: 7px;
+        .device-list-container {
           border: 1px solid var(--admin-border);
-          border-radius: 10px;
-          padding: 0 10px;
+          border-radius: 14px;
           background: var(--admin-surface);
-          color: var(--admin-text-muted);
-          font-size: 12px;
-        }
-
-        .sort-select select {
-          appearance: none;
-          border: 0;
-          outline: 0;
-          background: transparent;
-          color: var(--admin-text);
-          font-size: 12px;
-          font-weight: 700;
-          padding-right: 16px;
-          cursor: pointer;
-        }
-
-        .sort-select option {
-          background: var(--admin-surface);
-          color: var(--admin-text);
-        }
-
-        .sort-select svg {
-          pointer-events: none;
-          position: absolute;
-          right: 8px;
-        }
-
-        .devices-list {
-          width: 100%;
-          border: 1px solid var(--admin-border);
-          border-radius: 12px;
           overflow: hidden;
-          background: var(--admin-surface);
         }
 
-        .devices-list-header,
-        .device-row {
+        .device-list-header {
           display: grid;
           grid-template-columns:
-            minmax(190px, 1.35fr)
-            minmax(110px, .7fr)
-            minmax(170px, 1fr)
-            minmax(120px, .75fr)
-            minmax(120px, .75fr)
-            90px;
+            minmax(150px, 1.2fr)
+            minmax(115px, 0.8fr)
+            minmax(150px, 1.1fr)
+            minmax(125px, 0.9fr)
+            minmax(130px, 0.9fr)
+            92px;
           gap: 14px;
-          align-items: center;
-          padding: 0 18px;
+          padding: 12px 16px;
+          border-bottom: 1px solid var(--admin-border);
+          background: var(--admin-surface-subtle);
         }
 
-        .devices-list-header {
-          min-height: 44px;
-          background: var(--admin-surface-subtle);
-          border-bottom: 1px solid var(--admin-border);
+        .device-list-heading {
           color: var(--admin-text-muted);
           font-size: 11px;
           font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: .07em;
+          letter-spacing: 0.05em;
         }
 
         .device-row {
-          min-height: 68px;
+          display: grid;
+          grid-template-columns:
+            minmax(150px, 1.2fr)
+            minmax(115px, 0.8fr)
+            minmax(150px, 1.1fr)
+            minmax(125px, 0.9fr)
+            minmax(130px, 0.9fr)
+            92px;
+          gap: 14px;
+          align-items: center;
+          padding: 15px 16px;
           border-bottom: 1px solid var(--admin-border);
-          transition: background .15s ease;
+          transition: background 0.18s ease;
         }
 
         .device-row:last-child {
@@ -1066,94 +1181,326 @@ export default function Devices() {
           background: var(--admin-surface-subtle);
         }
 
-        .device-id-button {
-          border: 0;
-          background: transparent;
-          padding: 0;
-          color: var(--admin-text);
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          cursor: pointer;
-          text-align: left;
-          font-weight: 750;
+        .device-main {
           min-width: 0;
         }
 
-        .device-id-button:hover {
-          color: var(--admin-accent);
+        .device-id {
+          color: var(--admin-text);
+          font-size: 13px;
+          font-weight: 800;
+          word-break: break-word;
         }
 
-        .device-icon {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
+        .device-name {
+          margin-top: 4px;
+          color: var(--admin-text-muted);
+          font-size: 11px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .device-mono {
+          color: var(--admin-text);
+          font-size: 12px;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          word-break: break-word;
+        }
+
+        .device-muted {
+          color: var(--admin-text-muted);
+          font-size: 12px;
+        }
+
+        .device-owner {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .device-owner-icon {
+          width: 29px;
+          height: 29px;
+          flex: 0 0 29px;
           display: flex;
           align-items: center;
           justify-content: center;
+          border-radius: 8px;
           background: var(--admin-accent-soft);
           color: var(--admin-accent);
-          flex-shrink: 0;
+        }
+
+        .device-owner-text {
+          min-width: 0;
+        }
+
+        .device-owner-name {
+          color: var(--admin-text);
+          font-size: 12px;
+          font-weight: 700;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .device-owner-email {
+          margin-top: 2px;
+          color: var(--admin-text-muted);
+          font-size: 10px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .device-status {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          font-size: 11px;
+          gap: 7px;
+          width: fit-content;
+          padding: 5px 9px;
+          border-radius: 999px;
+          font-size: 10px;
           font-weight: 800;
-          letter-spacing: .04em;
-        }
-
-        .status-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          display: inline-block;
-        }
-
-        .device-status.active {
-          color: #22c55e;
-        }
-
-        .device-status.active .status-dot {
-          background: #22c55e;
-        }
-
-        .device-status.pending {
-          color: #f59e0b;
-        }
-
-        .device-status.pending .status-dot {
-          background: #f59e0b;
-        }
-
-        .device-status.inactive {
-          color: #ef4444;
-        }
-
-        .device-status.inactive .status-dot {
-          background: #ef4444;
-        }
-
-        .owner-cell,
-        .date-cell {
-          color: var(--admin-text-muted);
-          font-size: 12px;
-          overflow: hidden;
-          text-overflow: ellipsis;
           white-space: nowrap;
         }
 
-        .row-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 5px;
+        .device-status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: currentColor;
         }
 
-        .row-actions button {
+        .status-active {
+          color: #22c55e;
+          background: rgba(34, 197, 94, 0.12);
+        }
+
+        .status-offline {
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.12);
+        }
+
+        .status-ready {
+          color: #3b82f6;
+          background: rgba(59, 130, 246, 0.12);
+        }
+
+        .status-pending {
+          color: #a855f7;
+          background: rgba(168, 85, 247, 0.12);
+        }
+
+        .status-blocked {
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.12);
+        }
+
+        .status-inactive {
+          color: var(--admin-text-muted);
+          background: var(--admin-surface-subtle);
+        }
+
+        .device-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 6px;
+        }
+
+        .device-action {
           width: 34px;
           height: 34px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid var(--admin-border);
+          border-radius: 8px;
+          background: transparent;
+          color: var(--admin-text-muted);
+          cursor: pointer;
+          transition: 0.18s ease;
+        }
+
+        .device-action:hover {
+          border-color: var(--admin-accent);
+          color: var(--admin-accent);
+          background: var(--admin-accent-soft);
+        }
+
+        .device-action:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .device-pagination {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 13px 16px;
+          border-top: 1px solid var(--admin-border);
+          background: var(--admin-surface);
+        }
+
+        .device-pagination-info {
+          color: var(--admin-text-muted);
+          font-size: 12px;
+        }
+
+        .device-pagination-buttons {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .device-page-button {
+          width: 34px;
+          height: 34px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid var(--admin-border);
+          border-radius: 8px;
+          background: transparent;
+          color: var(--admin-text);
+          cursor: pointer;
+        }
+
+        .device-page-button:hover:not(:disabled) {
+          border-color: var(--admin-accent);
+          color: var(--admin-accent);
+        }
+
+        .device-page-button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .device-page-number {
+          min-width: 70px;
+          text-align: center;
+          color: var(--admin-text-muted);
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .device-empty {
+          padding: 65px 20px;
+          text-align: center;
+        }
+
+        .device-empty-icon {
+          width: 60px;
+          height: 60px;
+          margin: 0 auto 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 15px;
+          background: var(--admin-accent-soft);
+          color: var(--admin-accent);
+        }
+
+        .device-empty h3 {
+          margin: 0;
+          color: var(--admin-text);
+          font-size: 16px;
+        }
+
+        .device-empty p {
+          margin: 7px auto 0;
+          max-width: 430px;
+          color: var(--admin-text-muted);
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        .device-loading {
+          padding: 55px 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          color: var(--admin-text-muted);
+          font-size: 13px;
+        }
+
+        .device-loading-icon {
+          color: var(--admin-accent);
+          animation: devices-spin 0.9s linear infinite;
+        }
+
+        .device-error {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 14px;
+          padding: 12px 14px;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 10px;
+          background: rgba(239, 68, 68, 0.08);
+          color: #ef4444;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .device-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background: rgba(0, 0, 0, 0.65);
+          backdrop-filter: blur(5px);
+        }
+
+        .device-modal {
+          width: min(720px, 100%);
+          max-height: min(850px, calc(100vh - 40px));
+          overflow-y: auto;
+          border: 1px solid var(--admin-border);
+          border-radius: 16px;
+          background: var(--admin-surface);
+          box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .device-modal-header {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 15px;
+          padding: 18px 20px;
+          border-bottom: 1px solid var(--admin-border);
+          background: var(--admin-surface);
+        }
+
+        .device-modal-title {
+          margin: 0;
+          color: var(--admin-text);
+          font-size: 18px;
+          font-weight: 800;
+        }
+
+        .device-modal-subtitle {
+          margin-top: 5px;
+          color: var(--admin-text-muted);
+          font-size: 11px;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .device-modal-close {
+          width: 34px;
+          height: 34px;
+          flex: 0 0 34px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1164,588 +1511,1653 @@ export default function Devices() {
           cursor: pointer;
         }
 
-        .row-actions button:hover {
-          background: var(--admin-surface-subtle);
+        .device-modal-close:hover {
           color: var(--admin-text);
+          border-color: var(--admin-text-muted);
         }
 
-        .row-actions button:disabled {
-          opacity: .45;
-          cursor: not-allowed;
+        .device-modal-body {
+          padding: 20px;
         }
 
-        .empty-state {
-          min-height: 230px;
+        .device-detail-status {
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 18px;
+          padding-bottom: 18px;
+          border-bottom: 1px solid var(--admin-border);
+        }
+
+        .device-detail-section {
+          margin-top: 22px;
+        }
+
+        .device-detail-section:first-child {
+          margin-top: 0;
+        }
+
+        .device-detail-section-title {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          margin: 0 0 11px;
+          color: var(--admin-text);
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .device-detail-list {
+          border: 1px solid var(--admin-border);
+          border-radius: 10px;
+          overflow: hidden;
+        }
+
+        .device-detail-row {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 15px;
+          padding: 11px 13px;
+          border-bottom: 1px solid var(--admin-border);
+        }
+
+        .device-detail-row:last-child {
+          border-bottom: 0;
+        }
+
+        .device-detail-label {
+          flex: 0 0 40%;
+          color: var(--admin-text-muted);
+          font-size: 11px;
+        }
+
+        .device-detail-value {
+          min-width: 0;
+          text-align: right;
+          color: var(--admin-text);
+          font-size: 12px;
+          font-weight: 600;
+          word-break: break-word;
+        }
+
+        .device-detail-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 9px;
+          margin-top: 22px;
+          padding-top: 18px;
+          border-top: 1px solid var(--admin-border);
+        }
+
+        .device-primary-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 40px;
+          padding: 0 14px;
+          border: 1px solid var(--admin-accent);
+          border-radius: 9px;
+          background: var(--admin-accent);
+          color: white;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .device-primary-button:hover {
+          opacity: 0.9;
+        }
+
+        .device-secondary-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 40px;
+          padding: 0 14px;
+          border: 1px solid var(--admin-border);
+          border-radius: 9px;
+          background: transparent;
+          color: var(--admin-text);
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .device-secondary-button:hover {
+          border-color: var(--admin-accent);
+          color: var(--admin-accent);
+        }
+
+        .device-detail-loading {
+          display: flex;
           align-items: center;
           justify-content: center;
           gap: 9px;
+          min-height: 150px;
           color: var(--admin-text-muted);
-          text-align: center;
-        }
-
-        .empty-state h3 {
-          margin: 2px 0 0;
-          color: var(--admin-text);
-          font-size: 15px;
-        }
-
-        .empty-state p {
-          margin: 0;
           font-size: 13px;
         }
 
-        .devices-footer {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          padding: 11px 3px 0;
-          color: var(--admin-text-muted);
+        .device-detail-error {
+          margin-bottom: 14px;
+          padding: 11px 13px;
+          border-radius: 9px;
+          background: rgba(239, 68, 68, 0.08);
+          color: #ef4444;
           font-size: 12px;
         }
 
-        .spin {
-          animation: device-spin .9s linear infinite;
-        }
+        @media (max-width: 1200px) {
+          .device-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
 
-        @keyframes device-spin {
-          to {
-            transform: rotate(360deg);
+          .device-stat-item:nth-child(2n) {
+            border-right: 0;
+          }
+
+          .device-stat-item:nth-child(-n + 2) {
+            border-bottom: 1px solid var(--admin-border);
+          }
+
+          .device-list-header,
+          .device-row {
+            grid-template-columns:
+              minmax(145px, 1.2fr)
+              minmax(105px, 0.8fr)
+              minmax(135px, 1fr)
+              minmax(120px, 0.9fr)
+              85px;
+          }
+
+          .device-list-heading:nth-child(5),
+          .device-row > :nth-child(5) {
+            display: none;
           }
         }
 
-        @media (max-width: 1100px) {
-          .devices-list-header {
+        @media (max-width: 900px) {
+          .device-list-header {
             display: none;
           }
 
           .device-row {
-            grid-template-columns:
-              minmax(190px, 1.4fr)
-              minmax(110px, .7fr)
-              minmax(150px, 1fr)
-              90px;
-            padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px 15px;
+            padding: 16px;
           }
 
-          .device-row > div:nth-child(4),
-          .device-row > div:nth-child(5) {
-            display: none;
+          .device-row > :nth-child(2),
+          .device-row > :nth-child(3),
+          .device-row > :nth-child(4),
+          .device-row > :nth-child(5) {
+            grid-column: 1 / -1;
+          }
+
+          .device-row > :nth-child(6) {
+            grid-column: 2;
+            grid-row: 1;
+          }
+
+          .device-actions {
+            justify-content: flex-end;
+          }
+
+          .device-main {
+            grid-column: 1;
+            grid-row: 1;
+          }
+
+          .device-owner {
+            padding-top: 3px;
+          }
+
+          .device-row::before {
+            content: "";
+            display: block;
           }
         }
 
-        @media (max-width: 800px) {
+        @media (max-width: 680px) {
           .devices-header {
             align-items: stretch;
             flex-direction: column;
           }
 
-          .header-actions {
+          .devices-refresh-button {
             width: 100%;
           }
 
-          .header-actions button {
-            flex: 1;
+          .device-stats {
+            grid-template-columns: 1fr 1fr;
           }
 
-          .device-summary {
-            grid-template-columns: repeat(2, 1fr);
+          .device-stat-item {
+            padding: 14px;
           }
 
-          .summary-item:nth-child(2) {
-            border-right: 0;
+          .device-stat-icon {
+            width: 34px;
+            height: 34px;
+            flex-basis: 34px;
           }
 
-          .summary-item:nth-child(-n+2) {
-            border-bottom: 1px solid var(--admin-border);
+          .device-stat-value {
+            font-size: 20px;
           }
 
           .devices-toolbar {
-            flex-direction: column;
             align-items: stretch;
+            flex-direction: column;
           }
 
-          .search-box {
+          .devices-search {
+            flex-basis: auto;
             width: 100%;
           }
 
-          .toolbar-right {
-            justify-content: space-between;
-            flex-wrap: wrap;
+          .device-select,
+          .device-filter-label {
+            width: 100%;
           }
 
-          .filter-group {
-            max-width: 100%;
-            overflow-x: auto;
-          }
-        }
-
-        @media (max-width: 580px) {
-          .devices-header h1 {
-            font-size: 25px;
-          }
-
-          .header-actions {
-            flex-direction: column;
-          }
-
-          .toolbar-right {
-            flex-direction: column;
+          .device-pagination {
             align-items: stretch;
+            flex-direction: column;
           }
 
-          .filter-group {
-            width: 100%;
+          .device-pagination-info {
+            text-align: center;
           }
 
-          .filter-button {
-            flex: 1;
-            padding: 10px 7px;
+          .device-pagination-buttons {
+            justify-content: center;
           }
 
-          .sort-select {
-            width: 100%;
-            justify-content: space-between;
-          }
-
-          .device-row {
-            grid-template-columns: 1fr auto;
-            gap: 10px;
-          }
-
-          .device-row > div:nth-child(2) {
-            justify-self: end;
-          }
-
-          .owner-cell,
-          .date-cell {
-            display: none;
-          }
-
-          .row-actions {
-            justify-content: flex-start;
-          }
-
-          .device-row .row-actions {
-            grid-column: 1 / -1;
-            border-top: 1px solid var(--admin-border);
-            padding-top: 9px;
-          }
-        }
-      `}</style>
-    </>
-  );
-}
-
-function SummaryItem({ label, value, status }) {
-  return (
-    <div
-      className={`summary-item ${
-        status || ""
-      }`}
-    >
-      <span className="summary-label">
-        {label}
-      </span>
-
-      <span className="summary-value">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function DeviceDetails({
-  device,
-  rw,
-  text,
-  copied,
-  onCopy,
-  onDownload,
-  onClose,
-  pdfLoading,
-  getOwner,
-  getStatusClass,
-  getStatusLabel,
-  formatDate,
-}) {
-  const deviceId = device?.deviceId || "—";
-
-  const secretKey =
-    device?.secretKey ||
-    device?.defaultKey ||
-    device?.key ||
-    null;
-
-  const qrToken =
-    device?.qrToken ||
-    device?.token ||
-    null;
-
-  return (
-    <>
-      <div
-        className="device-modal-overlay"
-        onMouseDown={(event) => {
-          if (
-            event.target ===
-            event.currentTarget
-          ) {
-            onClose();
-          }
-        }}
-      >
-        <div className="device-modal">
-          <div className="device-modal-header">
-            <div>
-              <div className="device-modal-kicker">
-                {rw
-                  ? "DEVICE INFORMATION"
-                  : "DEVICE INFORMATION"}
-              </div>
-
-              <h2>{deviceId}</h2>
-            </div>
-
-            <button
-              type="button"
-              className="modal-close"
-              onClick={onClose}
-            >
-              <X size={19} />
-            </button>
-          </div>
-
-          <div className="device-modal-body">
-            <div className="detail-line">
-              <span>
-                {text.status}
-              </span>
-
-              <span
-                className={getStatusClass(
-                  device
-                )}
-              >
-                <span className="status-dot" />
-                {getStatusLabel(device)}
-              </span>
-            </div>
-
-            <div className="detail-line">
-              <span>
-                {text.owner}
-              </span>
-
-              <strong>
-                {getOwner(device)}
-              </strong>
-            </div>
-
-            <div className="detail-line">
-              <span>
-                {text.created}
-              </span>
-
-              <strong>
-                {formatDate(
-                  device.createdAt ||
-                    device.created
-                )}
-              </strong>
-            </div>
-
-            <div className="detail-line">
-              <span>
-                {text.lastSeen}
-              </span>
-
-              <strong>
-                {formatDate(
-                  device.lastSeen ||
-                    device.lastSeenAt ||
-                    device.updatedAt
-                )}
-              </strong>
-            </div>
-
-            {secretKey && (
-              <CredentialRow
-                label={
-                  rw
-                    ? "Secret Key"
-                    : "Secret Key"
-                }
-                value={secretKey}
-                copyKey="secretKey"
-                copied={copied}
-                onCopy={onCopy}
-              />
-            )}
-
-            {qrToken && (
-              <CredentialRow
-                label="QR Token"
-                value={qrToken}
-                copyKey="qrToken"
-                copied={copied}
-                onCopy={onCopy}
-              />
-            )}
-          </div>
-
-          <div className="device-modal-footer">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onClose}
-            >
-              {text.close}
-            </button>
-
-            <button
-              type="button"
-              className="primary-button"
-              onClick={() =>
-                onDownload(device)
-              }
-              disabled={
-                pdfLoading === device.deviceId
-              }
-            >
-              {pdfLoading ===
-              device.deviceId ? (
-                <RefreshCw
-                  size={17}
-                  className="spin"
-                />
-              ) : (
-                <Download size={17} />
-              )}
-
-              {text.download}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <style>{`
-        .device-modal-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 2000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          background: rgba(0,0,0,.68);
-          backdrop-filter: blur(5px);
-        }
-
-        .device-modal {
-          width: min(620px, 100%);
-          max-height: min(760px, 90vh);
-          overflow: auto;
-          border: 1px solid var(--admin-border);
-          border-radius: 14px;
-          background: var(--admin-surface);
-          color: var(--admin-text);
-          box-shadow: 0 25px 80px rgba(0,0,0,.35);
-        }
-
-        .device-modal-header {
-          display: flex;
-          justify-content: space-between;
-          gap: 15px;
-          padding: 22px;
-          border-bottom: 1px solid var(--admin-border);
-        }
-
-        .device-modal-kicker {
-          color: var(--admin-accent);
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: .12em;
-          margin-bottom: 6px;
-        }
-
-        .device-modal-header h2 {
-          margin: 0;
-          font-size: 21px;
-          word-break: break-word;
-        }
-
-        .modal-close {
-          width: 36px;
-          height: 36px;
-          border-radius: 9px;
-          border: 1px solid var(--admin-border);
-          background: transparent;
-          color: var(--admin-text-muted);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          flex-shrink: 0;
-        }
-
-        .modal-close:hover {
-          background: var(--admin-surface-subtle);
-          color: var(--admin-text);
-        }
-
-        .device-modal-body {
-          padding: 7px 22px;
-        }
-
-        .detail-line {
-          min-height: 54px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-          border-bottom: 1px solid var(--admin-border);
-          font-size: 13px;
-        }
-
-        .detail-line > span:first-child {
-          color: var(--admin-text-muted);
-        }
-
-        .detail-line strong {
-          text-align: right;
-          max-width: 65%;
-          word-break: break-word;
-        }
-
-        .credential-row {
-          padding: 15px 0;
-          border-bottom: 1px solid var(--admin-border);
-        }
-
-        .credential-label {
-          display: block;
-          color: var(--admin-text-muted);
-          font-size: 12px;
-          margin-bottom: 7px;
-        }
-
-        .credential-value {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .credential-value code {
-          flex: 1;
-          min-width: 0;
-          padding: 10px;
-          border: 1px solid var(--admin-border);
-          border-radius: 8px;
-          background: var(--admin-surface-subtle);
-          color: var(--admin-text);
-          font-size: 11px;
-          overflow-wrap: anywhere;
-        }
-
-        .copy-button {
-          height: 36px;
-          padding: 0 10px;
-          border: 1px solid var(--admin-border);
-          border-radius: 8px;
-          background: transparent;
-          color: var(--admin-text-muted);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          cursor: pointer;
-          font-size: 11px;
-          font-weight: 700;
-          flex-shrink: 0;
-        }
-
-        .copy-button:hover {
-          color: var(--admin-text);
-          background: var(--admin-surface-subtle);
-        }
-
-        .device-modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 9px;
-          padding: 17px 22px;
-          border-top: 1px solid var(--admin-border);
-        }
-
-        @media (max-width: 520px) {
-          .device-modal-overlay {
+          .device-modal-backdrop {
             padding: 10px;
           }
 
-          .device-modal-header,
-          .device-modal-body,
-          .device-modal-footer {
-            padding-left: 15px;
-            padding-right: 15px;
+          .device-modal {
+            max-height: calc(100vh - 20px);
+            border-radius: 13px;
           }
 
-          .device-modal-footer {
-            flex-direction: column-reverse;
+          .device-modal-body {
+            padding: 15px;
           }
 
-          .device-modal-footer button {
-            width: 100%;
-          }
-
-          .credential-value {
-            align-items: stretch;
+          .device-detail-row {
             flex-direction: column;
+            gap: 5px;
           }
 
-          .copy-button {
-            justify-content: center;
+          .device-detail-label {
+            flex-basis: auto;
+          }
+
+          .device-detail-value {
+            text-align: left;
+          }
+        }
+
+        @media (max-width: 440px) {
+          .device-stats {
+            grid-template-columns: 1fr;
+          }
+
+          .device-stat-item {
+            border-right: 0 !important;
+            border-bottom: 1px solid var(--admin-border);
+          }
+
+          .device-stat-item:last-child {
+            border-bottom: 0;
+          }
+
+          .device-row {
+            grid-template-columns: 1fr;
+          }
+
+          .device-row > :nth-child(6) {
+            grid-column: 1;
+            grid-row: auto;
+          }
+
+          .device-actions {
+            justify-content: flex-start;
+          }
+
+          .device-primary-button,
+          .device-secondary-button {
+            width: 100%;
           }
         }
       `}</style>
-    </>
-  );
-}
 
-function CredentialRow({
-  label,
-  value,
-  copyKey,
-  copied,
-  onCopy,
-}) {
-  return (
-    <div className="credential-row">
-      <span className="credential-label">
-        {label}
-      </span>
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
-      <div className="credential-value">
-        <code>{value}</code>
+      <div className="devices-header">
+        <div className="devices-header-copy">
+          <h1 className="devices-title">
+            {rw
+              ? "ANTIMATE Devices"
+              : "ANTIMATE Devices"}
+          </h1>
+
+          <p className="devices-subtitle">
+            {rw
+              ? "Genzura BR System devices zose, uko zihagaze, owners, gateways n'ibikorwa byazo."
+              : "Manage all BR System devices, their status, ownership, gateways and activity."}
+          </p>
+        </div>
 
         <button
-          type="button"
-          className="copy-button"
-          onClick={() =>
-            onCopy(value, copyKey)
+          className="devices-refresh-button"
+          onClick={refreshAll}
+          disabled={
+            refreshing ||
+            loading
           }
         >
-          {copied === copyKey ? (
-            <Check size={14} />
-          ) : (
-            <Copy size={14} />
-          )}
+          <RefreshCw
+            size={15}
+            className={
+              refreshing
+                ? "devices-refresh-spin"
+                : ""
+            }
+          />
 
-          {copied === copyKey
-            ? "Copied"
-            : "Copy"}
+          {refreshing
+            ? rw
+              ? "Birimo kuvugururwa..."
+              : "Refreshing..."
+            : rw
+            ? "Vugurura"
+            : "Refresh"}
         </button>
       </div>
+
+      {/* =================================================
+          ERROR
+      ================================================= */}
+
+      {error && (
+        <div className="device-error">
+          <AlertCircle
+            size={17}
+            style={{
+              flex: "0 0 auto",
+              marginTop: 1,
+            }}
+          />
+
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* =================================================
+          STATS
+      ================================================= */}
+
+      <div className="device-stats">
+        <StatItem
+          icon={Cpu}
+          label={
+            rw
+              ? "Devices zose"
+              : "Total devices"
+          }
+          value={
+            statsLoading
+              ? "—"
+              : stats.total
+          }
+          description={
+            rw
+              ? "Zose ziri muri platform"
+              : "All registered devices"
+          }
+        />
+
+        <StatItem
+          icon={Wifi}
+          label={
+            rw
+              ? "Online"
+              : "Online"
+          }
+          value={
+            statsLoading
+              ? "—"
+              : stats.online
+          }
+          description={
+            rw
+              ? "Ziri gukora ubu"
+              : "Currently connected"
+          }
+          type="online"
+        />
+
+        <StatItem
+          icon={WifiOff}
+          label={
+            rw
+              ? "Offline"
+              : "Offline"
+          }
+          value={
+            statsLoading
+              ? "—"
+              : stats.offline
+          }
+          description={
+            rw
+              ? "Active ariko zitari online"
+              : "Active but disconnected"
+          }
+          type="offline"
+        />
+
+        <StatItem
+          icon={Package}
+          label={
+            rw
+              ? "Ziteguye"
+              : "Ready"
+          }
+          value={
+            statsLoading
+              ? "—"
+              : stats.ready
+          }
+          description={
+            rw
+              ? "Zitarahuzwa na user"
+              : "Not yet claimed"
+          }
+          type="ready"
+        />
+      </div>
+
+      {/* =================================================
+          SECONDARY STATUS SUMMARY
+      ================================================= */}
+
+      <div
+        className="devices-toolbar"
+        style={{
+          marginBottom: 18,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            flexWrap: "wrap",
+            color:
+              "var(--admin-text-muted)",
+            fontSize: 11,
+          }}
+        >
+          <Activity size={14} />
+
+          <span>
+            {rw
+              ? `Claimed: ${stats.claimed}`
+              : `Claimed: ${stats.claimed}`}
+          </span>
+
+          <span>•</span>
+
+          <span>
+            {rw
+              ? `Unclaimed: ${stats.unclaimed}`
+              : `Unclaimed: ${stats.unclaimed}`}
+          </span>
+
+          <span>•</span>
+
+          <span>
+            {rw
+              ? `Pending: ${stats.pending}`
+              : `Pending: ${stats.pending}`}
+          </span>
+
+          <span>•</span>
+
+          <span>
+            {rw
+              ? `Blocked: ${stats.blocked}`
+              : `Blocked: ${stats.blocked}`}
+          </span>
+        </div>
+      </div>
+
+      {/* =================================================
+          TOOLBAR
+      ================================================= */}
+
+      <div className="devices-toolbar">
+        <div className="devices-search">
+          <Search
+            size={16}
+            className="devices-search-icon"
+          />
+
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(event) =>
+              setSearchInput(
+                event.target.value
+              )
+            }
+            placeholder={
+              rw
+                ? "Shakisha Device ID, name cyangwa Gateway ID..."
+                : "Search Device ID, name or Gateway ID..."
+            }
+          />
+
+          {searchInput && (
+            <button
+              className="devices-search-clear"
+              onClick={() => {
+                setSearchInput("");
+                setSearch("");
+                setPage(1);
+              }}
+              title={
+                rw
+                  ? "Siba search"
+                  : "Clear search"
+              }
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="device-filter-label">
+          <Filter size={14} />
+
+          {rw
+            ? "Filter"
+            : "Filter"}
+        </div>
+
+        <select
+          className="device-select"
+          value={status}
+          onChange={(event) =>
+            handleStatusChange(
+              event.target.value
+            )
+          }
+          aria-label="Device status filter"
+        >
+          <option value="ALL">
+            {rw
+              ? `Zose (${visibleStatusCount.ALL})`
+              : `All (${visibleStatusCount.ALL})`}
+          </option>
+
+          <option value="ACTIVE">
+            {rw
+              ? `Active (${visibleStatusCount.ACTIVE})`
+              : `Active (${visibleStatusCount.ACTIVE})`}
+          </option>
+
+          <option value="OFFLINE">
+            {rw
+              ? `Offline (${visibleStatusCount.OFFLINE})`
+              : `Offline (${visibleStatusCount.OFFLINE})`}
+          </option>
+
+          <option value="READY">
+            {rw
+              ? `Ready (${visibleStatusCount.READY})`
+              : `Ready (${visibleStatusCount.READY})`}
+          </option>
+
+          <option value="PENDING">
+            {rw
+              ? `Pending (${visibleStatusCount.PENDING})`
+              : `Pending (${visibleStatusCount.PENDING})`}
+          </option>
+
+          <option value="BLOCKED">
+            {rw
+              ? `Blocked (${visibleStatusCount.BLOCKED})`
+              : `Blocked (${visibleStatusCount.BLOCKED})`}
+          </option>
+        </select>
+
+        <select
+          className="device-select"
+          value={sort}
+          onChange={(event) =>
+            handleSortChange(
+              event.target.value
+            )
+          }
+          aria-label="Device sort"
+        >
+          <option value="newest">
+            {rw
+              ? "Bishya mbere"
+              : "Newest first"}
+          </option>
+
+          <option value="oldest">
+            {rw
+              ? "Ibya kera mbere"
+              : "Oldest first"}
+          </option>
+
+          <option value="device_asc">
+            {rw
+              ? "Device ID A-Z"
+              : "Device ID A-Z"}
+          </option>
+
+          <option value="device_desc">
+            {rw
+              ? "Device ID Z-A"
+              : "Device ID Z-A"}
+          </option>
+
+          <option value="updated">
+            {rw
+              ? "Byavuguruwe vuba"
+              : "Recently updated"}
+          </option>
+        </select>
+      </div>
+
+      {/* =================================================
+          DEVICE LIST
+      ================================================= */}
+
+      <div className="device-list-container">
+        <div className="device-list-header">
+          <div className="device-list-heading">
+            Device
+          </div>
+
+          <div className="device-list-heading">
+            Status
+          </div>
+
+          <div className="device-list-heading">
+            Owner
+          </div>
+
+          <div className="device-list-heading">
+            Gateway
+          </div>
+
+          <div className="device-list-heading">
+            Last seen
+          </div>
+
+          <div className="device-list-heading">
+            {rw
+              ? "Ibikorwa"
+              : "Actions"}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="device-loading">
+            <Loader2
+              size={25}
+              className="device-loading-icon"
+            />
+
+            <span>
+              {rw
+                ? "Birimo kuboneka..."
+                : "Loading devices..."}
+            </span>
+          </div>
+        ) : devices.length === 0 ? (
+          <EmptyState
+            hasFilters={hasFilters}
+            language={language}
+          />
+        ) : (
+          devices.map(
+            (device) => {
+              const deviceStatus =
+                getStatus(device);
+
+              const ownerName =
+                getOwnerName(
+                  device
+                );
+
+              return (
+                <div
+                  className="device-row"
+                  key={
+                    device._id ||
+                    device.deviceId
+                  }
+                >
+                  {/* DEVICE */}
+
+                  <div className="device-main">
+                    <div className="device-id">
+                      {device.deviceId}
+                    </div>
+
+                    {device.deviceName && (
+                      <div className="device-name">
+                        {
+                          device.deviceName
+                        }
+                      </div>
+                    )}
+                  </div>
+
+                  {/* STATUS */}
+
+                  <div>
+                    <StatusBadge
+                      status={
+                        deviceStatus
+                      }
+                      language={
+                        language
+                      }
+                    />
+                  </div>
+
+                  {/* OWNER */}
+
+                  <div className="device-owner">
+                    <div className="device-owner-icon">
+                      <Link2
+                        size={14}
+                      />
+                    </div>
+
+                    <div className="device-owner-text">
+                      <div className="device-owner-name">
+                        {ownerName ||
+                          (rw
+                            ? "Nta owner"
+                            : "Not assigned")}
+                      </div>
+
+                      {device.owner
+                        ?.email && (
+                        <div className="device-owner-email">
+                          {
+                            device
+                              .owner
+                              .email
+                          }
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* GATEWAY */}
+
+                  <div>
+                    {device.gatewayId ? (
+                      <span className="device-mono">
+                        {
+                          device.gatewayId
+                        }
+                      </span>
+                    ) : (
+                      <span className="device-muted">
+                        {rw
+                          ? "Nta gateway"
+                          : "No gateway"}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* LAST SEEN */}
+
+                  <div>
+                    <div className="device-muted">
+                      {formatRelativeDate(
+                        device.lastSeen
+                      )}
+                    </div>
+
+                    {device.lastSeen && (
+                      <div
+                        style={{
+                          marginTop: 3,
+                          color:
+                            "var(--admin-text-muted)",
+                          fontSize: 9,
+                        }}
+                      >
+                        {formatDate(
+                          device.lastSeen
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ACTIONS */}
+
+                  <div className="device-actions">
+                    <button
+                      className="device-action"
+                      onClick={() =>
+                        openDevice(
+                          device
+                        )
+                      }
+                      title={
+                        rw
+                          ? "Reba details"
+                          : "View details"
+                      }
+                    >
+                      <Eye
+                        size={15}
+                      />
+                    </button>
+
+                    <button
+                      className="device-action"
+                      onClick={() =>
+                        downloadLabel(
+                          device.deviceId
+                        )
+                      }
+                      disabled={
+                        pdfLoading ===
+                        device.deviceId
+                      }
+                      title={
+                        rw
+                          ? "Kuramo PDF"
+                          : "Download PDF"
+                      }
+                    >
+                      {pdfLoading ===
+                      device.deviceId ? (
+                        <Loader2
+                          size={14}
+                          className="devices-refresh-spin"
+                        />
+                      ) : (
+                        <Download
+                          size={15}
+                        />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+          )
+        )}
+
+        {/* =================================================
+            PAGINATION
+        ================================================= */}
+
+        {!loading &&
+          devices.length > 0 && (
+            <div className="device-pagination">
+              <div className="device-pagination-info">
+                {pagination.total > 0
+                  ? rw
+                    ? `Byerekana ${startItem}-${endItem} muri ${pagination.total}`
+                    : `Showing ${startItem}-${endItem} of ${pagination.total}`
+                  : rw
+                  ? "Nta device"
+                  : "No devices"}
+              </div>
+
+              <div className="device-pagination-buttons">
+                <button
+                  className="device-page-button"
+                  disabled={
+                    !canPrevious
+                  }
+                  onClick={() =>
+                    setPage(
+                      (current) =>
+                        Math.max(
+                          1,
+                          current -
+                            1
+                        )
+                    )
+                  }
+                  title={
+                    rw
+                      ? "Page ibanza"
+                      : "Previous page"
+                  }
+                >
+                  <ChevronLeft
+                    size={16}
+                  />
+                </button>
+
+                <div className="device-page-number">
+                  {pagination.pages
+                    ? `${page} / ${pagination.pages}`
+                    : page}
+                </div>
+
+                <button
+                  className="device-page-button"
+                  disabled={
+                    !canNext
+                  }
+                  onClick={() =>
+                    setPage(
+                      (current) =>
+                        current +
+                        1
+                    )
+                  }
+                  title={
+                    rw
+                      ? "Page ikurikira"
+                      : "Next page"
+                  }
+                >
+                  <ChevronRight
+                    size={16}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
+      </div>
+
+      {/* =================================================
+          DETAIL MODAL
+      ================================================= */}
+
+      {selectedDevice && (
+        <div
+          className="device-modal-backdrop"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              closeDevice();
+            }
+          }}
+        >
+          <div className="device-modal">
+            {/* MODAL HEADER */}
+
+            <div className="device-modal-header">
+              <div>
+                <h2 className="device-modal-title">
+                  {rw
+                    ? "Device details"
+                    : "Device details"}
+                </h2>
+
+                <div className="device-modal-subtitle">
+                  {
+                    selectedDevice.deviceId
+                  }
+                </div>
+              </div>
+
+              <button
+                className="device-modal-close"
+                onClick={
+                  closeDevice
+                }
+                title={
+                  rw
+                    ? "Funga"
+                    : "Close"
+                }
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* MODAL BODY */}
+
+            <div className="device-modal-body">
+              {detailLoading && (
+                <div
+                  className="device-detail-loading"
+                  style={{
+                    marginBottom: 15,
+                  }}
+                >
+                  <Loader2
+                    size={18}
+                    className="devices-refresh-spin"
+                  />
+
+                  {rw
+                    ? "Birimo kuboneka..."
+                    : "Loading latest details..."}
+                </div>
+              )}
+
+              {detailError && (
+                <div className="device-detail-error">
+                  {detailError}
+                </div>
+              )}
+
+              {/* STATUS */}
+
+              <div className="device-detail-status">
+                <div>
+                  <div
+                    style={{
+                      color:
+                        "var(--admin-text-muted)",
+                      fontSize: 10,
+                      marginBottom: 6,
+                    }}
+                  >
+                    {rw
+                      ? "STATUS"
+                      : "STATUS"}
+                  </div>
+
+                  <StatusBadge
+                    status={getStatus(
+                      selectedDevice
+                    )}
+                    language={
+                      language
+                    }
+                  />
+                </div>
+
+                <div
+                  style={{
+                    textAlign:
+                      "right",
+                  }}
+                >
+                  <div
+                    style={{
+                      color:
+                        "var(--admin-text-muted)",
+                      fontSize: 10,
+                      marginBottom: 5,
+                    }}
+                  >
+                    {rw
+                      ? "Online"
+                      : "Online"}
+                  </div>
+
+                  <strong
+                    style={{
+                      color:
+                        selectedDevice.online
+                          ? "#22c55e"
+                          : "var(--admin-text-muted)",
+                      fontSize: 12,
+                    }}
+                  >
+                    {selectedDevice.online
+                      ? rw
+                        ? "Yego"
+                        : "Yes"
+                      : rw
+                      ? "Oya"
+                      : "No"}
+                  </strong>
+                </div>
+              </div>
+
+              {/* IDENTITY */}
+
+              <div className="device-detail-section">
+                <h3 className="device-detail-section-title">
+                  <ShieldCheck
+                    size={15}
+                  />
+
+                  {rw
+                    ? "Identity"
+                    : "Identity"}
+                </h3>
+
+                <div className="device-detail-list">
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Device ID
+                    </span>
+
+                    <strong className="device-detail-value">
+                      {
+                        selectedDevice.deviceId
+                      }
+                    </strong>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Device name
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice.deviceName ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Activation
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice.activationStatus ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Claimed
+                    </span>
+
+                    <span className="device-detail-value">
+                      {selectedDevice.claimed
+                        ? rw
+                          ? "Yego"
+                          : "Yes"
+                        : rw
+                        ? "Oya"
+                        : "No"}
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Enabled
+                    </span>
+
+                    <span className="device-detail-value">
+                      {selectedDevice.enabled
+                        ? rw
+                          ? "Yego"
+                          : "Yes"
+                        : rw
+                        ? "Oya"
+                        : "No"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* OWNER */}
+
+              <div className="device-detail-section">
+                <h3 className="device-detail-section-title">
+                  <Link2
+                    size={15}
+                  />
+
+                  {rw
+                    ? "Ownership"
+                    : "Ownership"}
+                </h3>
+
+                <div className="device-detail-list">
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Owner
+                    </span>
+
+                    <span className="device-detail-value">
+                      {getOwnerName(
+                        selectedDevice
+                      ) ||
+                        (rw
+                          ? "Nta owner"
+                          : "Not assigned")}
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Email
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice
+                          .owner
+                          ?.email ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Phone
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice
+                          .owner
+                          ?.phone ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Claimed at
+                    </span>
+
+                    <span className="device-detail-value">
+                      {formatDate(
+                        selectedDevice.claimedAt
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* NETWORK */}
+
+              <div className="device-detail-section">
+                <h3 className="device-detail-section-title">
+                  <Wifi
+                    size={15}
+                  />
+
+                  {rw
+                    ? "Network"
+                    : "Network"}
+                </h3>
+
+                <div className="device-detail-list">
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Gateway
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice.gatewayId ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Last seen
+                    </span>
+
+                    <span className="device-detail-value">
+                      {formatDate(
+                        selectedDevice.lastSeen
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Created
+                    </span>
+
+                    <span className="device-detail-value">
+                      {formatDate(
+                        selectedDevice.createdAt
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Updated
+                    </span>
+
+                    <span className="device-detail-value">
+                      {formatDate(
+                        selectedDevice.updatedAt
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* BR SYSTEM */}
+
+              <div className="device-detail-section">
+                <h3 className="device-detail-section-title">
+                  <Cpu
+                    size={15}
+                  />
+
+                  {rw
+                    ? "BR System"
+                    : "BR System"}
+                </h3>
+
+                <div className="device-detail-list">
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Chicks type
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice.chicksType ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Number of chickens
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice.numberOfChickens ??
+                        0
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Room area
+                    </span>
+
+                    <span className="device-detail-value">
+                      {selectedDevice.broodingRoomArea
+                        ? `${selectedDevice.broodingRoomArea} m²`
+                        : "—"}
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Batch status
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice.batchStatus ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Heater
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice.heaterMode ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Fan
+                    </span>
+
+                    <span className="device-detail-value">
+                      {selectedDevice.fanMode
+                        ? `${selectedDevice.fanMode} (${selectedDevice.fanSpeed || 0}%)`
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* LOCATION */}
+
+              <div className="device-detail-section">
+                <h3 className="device-detail-section-title">
+                  <Activity
+                    size={15}
+                  />
+
+                  {rw
+                    ? "Location"
+                    : "Location"}
+                </h3>
+
+                <div className="device-detail-list">
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Country
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice
+                          .location
+                          ?.country ||
+                        "Rwanda"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      District
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice
+                          .location
+                          ?.district ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+
+                  <div className="device-detail-row">
+                    <span className="device-detail-label">
+                      Sector
+                    </span>
+
+                    <span className="device-detail-value">
+                      {
+                        selectedDevice
+                          .location
+                          ?.sector ||
+                        "—"
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ACTIONS */}
+
+              <div className="device-detail-actions">
+                <button
+                  className="device-primary-button"
+                  onClick={() =>
+                    downloadLabel(
+                      selectedDevice.deviceId
+                    )
+                  }
+                  disabled={
+                    pdfLoading ===
+                    selectedDevice.deviceId
+                  }
+                >
+                  {pdfLoading ===
+                  selectedDevice.deviceId ? (
+                    <Loader2
+                      size={14}
+                      className="devices-refresh-spin"
+                    />
+                  ) : (
+                    <Download
+                      size={14}
+                    />
+                  )}
+
+                  {rw
+                    ? "Kuramo PDF Label"
+                    : "Download PDF Label"}
+                </button>
+
+                <button
+                  className="device-secondary-button"
+                  onClick={() =>
+                    copyValue(
+                      selectedDevice.deviceId,
+                      "deviceId"
+                    )
+                  }
+                >
+                  {copied ===
+                  "deviceId" ? (
+                    <Check
+                      size={14}
+                    />
+                  ) : (
+                    <Copy
+                      size={14}
+                    />
+                  )}
+
+                  {copied ===
+                  "deviceId"
+                    ? rw
+                      ? "Byakopowe"
+                      : "Copied"
+                    : rw
+                    ? "Kopa Device ID"
+                    : "Copy Device ID"}
+                </button>
+
+                <button
+                  className="device-secondary-button"
+                  onClick={
+                    closeDevice
+                  }
+                >
+                  <X size={14} />
+
+                  {rw
+                    ? "Funga"
+                    : "Close"}
+                </button>
+              </div>
+
+              {/* SECURITY NOTE */}
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems:
+                    "flex-start",
+                  gap: 9,
+                  marginTop: 16,
+                  padding: "11px 13px",
+                  border:
+                    "1px solid var(--admin-border)",
+                  borderRadius: 9,
+                  color:
+                    "var(--admin-text-muted)",
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                }}
+              >
+                <KeyRound
+                  size={15}
+                  style={{
+                    flex:
+                      "0 0 auto",
+                    marginTop: 1,
+                    color:
+                      "var(--admin-accent)",
+                  }}
+                />
+
+                <span>
+                  {rw
+                    ? "Security: secret key, factory key na QR token ntibigaragazwa muri device details. Bikomeza kurindwa na backend."
+                    : "Security: secret key, factory key and QR token are not exposed in device details. They remain protected by the backend."}
+                </span>
+              </div>
+
+              {/* LAST SEEN */}
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems:
+                    "center",
+                  gap: 7,
+                  marginTop: 15,
+                  color:
+                    "var(--admin-text-muted)",
+                  fontSize: 10,
+                }}
+              >
+                <Clock3
+                  size={13}
+                />
+
+                {selectedDevice.lastSeen
+                  ? rw
+                    ? `Last seen: ${formatDate(
+                        selectedDevice.lastSeen
+                      )}`
+                    : `Last seen: ${formatDate(
+                        selectedDevice.lastSeen
+                      )}`
+                  : rw
+                  ? "Device ntirigeze igaragara online."
+                  : "Device has not reported online yet."}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
