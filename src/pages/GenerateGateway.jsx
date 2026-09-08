@@ -9,741 +9,1396 @@ import {
   Router,
   RefreshCw,
   Download,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 import api from "../api/axios";
-
+import { useAppSettings } from "../context/AppSettingsContext";
 
 export default function GenerateGateway() {
-
+  const { language } = useAppSettings();
 
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const [gateway, setGateway] = useState(null);
 
   const [copied, setCopied] = useState("");
+  const [showKey, setShowKey] = useState(false);
 
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
+  const isRw = language === "rw";
 
+  /* ============================================================
+     GENERATE GATEWAY
+  ============================================================ */
 
-  // ================================
-  // GENERATE GATEWAY
-  // ================================
-  const handleGenerate = async()=>{
-
-
-    try{
-
-
+  const handleGenerate = async () => {
+    try {
       setLoading(true);
+      setError("");
+      setSuccess("");
+      setCopied("");
+      setShowKey(false);
 
+      const res = await api.post("/gateway/generate");
 
+      const generatedGateway = res?.data?.data;
 
-      const res =
-        await api.post(
-          "/gateway/generate"
+      if (!generatedGateway) {
+        throw new Error(
+          isRw
+            ? "Gateway ntiyagarutse neza muri server."
+            : "Gateway data was not returned by the server."
         );
+      }
 
+      setGateway(generatedGateway);
 
-
-      setGateway(
-        res.data.data
+      setSuccess(
+        isRw
+          ? "Gateway yakozwe neza."
+          : "Gateway credentials generated successfully."
       );
-
-
-
-    }
-    catch(err){
-
-
-      console.log(
+    } catch (err) {
+      console.error(
         "Gateway generation error:",
         err.response?.data || err.message
       );
 
-
-
-      alert(
+      setError(
         err.response?.data?.message ||
-        "Failed to generate gateway credentials"
+          (isRw
+            ? "Kurema Gateway byanze. Ongera ugerageze."
+            : "Failed to generate gateway credentials. Please try again.")
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ============================================================
+     COPY
+  ============================================================ */
+
+  const copyText = async (value, type) => {
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(String(value));
+
+      setCopied(type);
+
+      setTimeout(() => {
+        setCopied("");
+      }, 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+
+      setError(
+        isRw
+          ? "Copy yanze kuri iyi browser."
+          : "Copy failed on this browser."
+      );
+    }
+  };
+
+  /* ============================================================
+     DOWNLOAD PDF
+  ============================================================ */
+
+  const downloadPDF = async () => {
+    if (!gateway?._id) return;
+
+    try {
+      setPdfLoading(true);
+      setError("");
+
+      const response = await api.get(
+        `/gateway/${gateway._id}/pdf`,
+        {
+          responseType: "blob",
+        }
       );
 
+      const blob = new Blob(
+        [response.data],
+        { type: "application/pdf" }
+      );
 
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+
+      link.download =
+        `${gateway.gatewayId || "gateway"}.pdf`;
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(
+        "PDF download error:",
+        err.response?.data || err.message
+      );
+
+      setError(
+        isRw
+          ? "PDF download yanze. Ongera ugerageze."
+          : "PDF download failed. Please try again."
+      );
+    } finally {
+      setPdfLoading(false);
     }
-    finally{
-
-
-      setLoading(false);
-
-
-    }
-
-
   };
 
+  /* ============================================================
+     QR DATA
+  ============================================================ */
 
+  const qrData = gateway
+    ? JSON.stringify({
+        gatewayId: gateway.gatewayId,
+        qrToken: gateway.qrToken,
+      })
+    : "";
 
+  /* ============================================================
+     MASK KEY
+  ============================================================ */
 
+  const maskedKey = gateway?.defaultKey
+    ? "••••••••••••••••••••••••••••••••"
+    : "—";
 
-  // ================================
-  // COPY TEXT
-  // ================================
-  const copyText = async(value,type)=>{
+  /* ============================================================
+     RENDER
+  ============================================================ */
 
+  return (
+    <div className="gateway-page">
 
-    await navigator.clipboard.writeText(
-      value
-    );
+      {/* ========================================================
+          HEADER
+      ======================================================== */}
 
+      <header className="gateway-header">
 
-    setCopied(type);
+        <div className="gateway-header-text">
 
+          <div className="gateway-breadcrumb">
+            <Router size={14} />
 
+            <span>
+              {isRw
+                ? "Administration"
+                : "Administration"}
+            </span>
 
-    setTimeout(()=>{
+            <span>/</span>
 
-      setCopied("");
+            <span>
+              {isRw
+                ? "Kora Gateway"
+                : "Generate Gateway"}
+            </span>
+          </div>
 
-    },2000);
+          <h1>
+            {isRw
+              ? "Kora Gateway"
+              : "Generate Gateway"}
+          </h1>
 
+          <p>
+            {isRw
+              ? "Kora identity na credentials byize bya ANTIMATE Gateway."
+              : "Create a secure identity and credentials for an ANTIMATE Gateway."}
+          </p>
 
-  };
+        </div>
 
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={loading}
+          className="gateway-generate-button"
+        >
+          <RefreshCw
+            size={18}
+            className={
+              loading
+                ? "gateway-spin"
+                : ""
+            }
+          />
 
+          <span>
+            {loading
+              ? isRw
+                ? "Birakorwa..."
+                : "Generating..."
+              : isRw
+                ? "Kora Gateway"
+                : "Generate Gateway"}
+          </span>
+        </button>
 
+      </header>
 
+      {/* ========================================================
+          FEEDBACK
+      ======================================================== */}
 
+      {error && (
+        <div className="gateway-alert gateway-alert-error">
+          <AlertCircle size={18} />
 
-  // ================================
-  // DOWNLOAD PDF
-  // ================================
-  const downloadPDF = async()=>{
+          <span>{error}</span>
 
-try{
+          <button
+            type="button"
+            onClick={() => setError("")}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
+      {success && (
+        <div className="gateway-alert gateway-alert-success">
+          <CheckCircle2 size={18} />
 
-const response =
-await api.get(
+          <span>{success}</span>
 
-`/gateway/${gateway._id}/pdf`,
+          <button
+            type="button"
+            onClick={() => setSuccess("")}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
-{
-responseType:"blob"
+      {/* ========================================================
+          GENERATED GATEWAY
+      ======================================================== */}
+
+      {gateway && (
+        <div className="gateway-workspace">
+
+          {/* ====================================================
+              MAIN INFORMATION
+          ==================================================== */}
+
+          <section className="gateway-section">
+
+            <div className="gateway-section-header">
+
+              <div className="gateway-section-title">
+
+                <div className="gateway-section-icon">
+                  <Router size={19} />
+                </div>
+
+                <div>
+                  <h2>
+                    {isRw
+                      ? "Gateway Information"
+                      : "Gateway Information"}
+                  </h2>
+
+                  <p>
+                    {isRw
+                      ? "Identity na credentials bya Gateway yakozwe."
+                      : "Identity and credentials generated for this gateway."}
+                  </p>
+                </div>
+
+              </div>
+
+              <span className="gateway-ready-status">
+                <span />
+                READY
+              </span>
+
+            </div>
+
+            <div className="gateway-information-list">
+
+              {/* Gateway ID */}
+
+              <CredentialRow
+                label="Gateway ID"
+                value={gateway.gatewayId}
+                type="gateway-id"
+                copied={copied}
+                onCopy={copyText}
+              />
+
+              {/* Default Key */}
+
+              <div className="gateway-credential-row">
+
+                <div className="gateway-credential-label">
+
+                  <div className="gateway-credential-icon">
+                    <KeyRound size={16} />
+                  </div>
+
+                  <div>
+                    <span>
+                      {isRw
+                        ? "Gateway Default Key"
+                        : "Gateway Default Key"}
+                    </span>
+
+                    <small>
+                      {isRw
+                        ? "Secret key ikoreshwa mu gutangira Gateway."
+                        : "Secret key used during gateway provisioning."}
+                    </small>
+                  </div>
+
+                </div>
+
+                <div className="gateway-value-area">
+
+                  <code>
+                    {showKey
+                      ? gateway.defaultKey || "—"
+                      : maskedKey}
+                  </code>
+
+                  <div className="gateway-value-actions">
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowKey(
+                          (previous) => !previous
+                        )
+                      }
+                      title={
+                        showKey
+                          ? "Hide key"
+                          : "Show key"
+                      }
+                    >
+                      {showKey ? (
+                        <EyeOff size={17} />
+                      ) : (
+                        <Eye size={17} />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          gateway.defaultKey,
+                          "gateway-key"
+                        )
+                      }
+                      title="Copy"
+                    >
+                      {copied === "gateway-key" ? (
+                        <Check size={17} />
+                      ) : (
+                        <Copy size={17} />
+                      )}
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* Status */}
+
+              <div className="gateway-information-simple">
+
+                <div>
+                  <span className="gateway-simple-label">
+                    {isRw ? "Status" : "Status"}
+                  </span>
+
+                  <span className="gateway-simple-value gateway-status-ready">
+                    <span />
+                    READY
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Security note */}
+
+            <div className="gateway-security-note">
+
+              <ShieldCheck size={19} />
+
+              <div>
+                <strong>
+                  {isRw
+                    ? "Bika credentials neza"
+                    : "Protect these credentials"}
+                </strong>
+
+                <p>
+                  {isRw
+                    ? "Default Key ni secret. Ntuyisangize umuntu utabifitiye ububasha kandi uyibike ahantu hizewe."
+                    : "The Default Key is a secret credential. Do not share it with unauthorized people and store it securely."}
+                </p>
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* ====================================================
+              QR SECTION
+          ==================================================== */}
+
+          <section className="gateway-section gateway-qr-section">
+
+            <div className="gateway-section-header">
+
+              <div className="gateway-section-title">
+
+                <div className="gateway-section-icon">
+                  <QrCode size={19} />
+                </div>
+
+                <div>
+                  <h2>
+                    {isRw
+                      ? "Provisioning QR"
+                      : "Provisioning QR"}
+                  </h2>
+
+                  <p>
+                    {isRw
+                      ? "QR code ikoreshwa mu guhuza Gateway na ANTIMATE."
+                      : "Use this QR code to provision the gateway."}
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+            <div className="gateway-qr-content">
+
+              <div className="gateway-qr-box">
+                <QRCode
+                  value={qrData}
+                  size={190}
+                  bgColor="#ffffff"
+                  fgColor="#111111"
+                />
+              </div>
+
+              <div className="gateway-qr-description">
+
+                <div className="gateway-qr-token-title">
+                  <KeyRound size={16} />
+
+                  <span>
+                    {isRw
+                      ? "QR Token"
+                      : "QR Token"}
+                  </span>
+                </div>
+
+                <p>
+                  {isRw
+                    ? "Scan iyi QR code ukoresheje uburyo bwa ANTIMATE bwo kwinjiza Gateway."
+                    : "Scan this QR code using the ANTIMATE provisioning workflow to configure the gateway."}
+                </p>
+
+                <div className="gateway-qr-actions">
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      copyText(
+                        qrData,
+                        "qr-data"
+                      )
+                    }
+                    className="gateway-secondary-button"
+                  >
+                    {copied === "qr-data" ? (
+                      <Check size={16} />
+                    ) : (
+                      <Copy size={16} />
+                    )}
+
+                    {copied === "qr-data"
+                      ? isRw
+                        ? "Byakopiwe"
+                        : "Copied"
+                      : isRw
+                        ? "Kopa QR data"
+                        : "Copy QR data"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={downloadPDF}
+                    disabled={pdfLoading}
+                    className="gateway-primary-button"
+                  >
+                    <Download
+                      size={16}
+                      className={
+                        pdfLoading
+                          ? "gateway-spin"
+                          : ""
+                      }
+                    />
+
+                    {pdfLoading
+                      ? isRw
+                        ? "Irakurura..."
+                        : "Downloading..."
+                      : isRw
+                        ? "Download PDF"
+                        : "Download PDF"}
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        </div>
+      )}
+
+      {/* ========================================================
+          EMPTY STATE
+      ======================================================== */}
+
+      {!gateway && !loading && (
+        <section className="gateway-empty-state">
+
+          <div className="gateway-empty-icon">
+            <KeyRound size={31} />
+          </div>
+
+          <h2>
+            {isRw
+              ? "Nta Gateway irakorwa"
+              : "No gateway generated"}
+          </h2>
+
+          <p>
+            {isRw
+              ? "Kanda kuri “Kora Gateway” kugirango ukore Gateway identity na credentials nshya."
+              : "Click “Generate Gateway” to create a new gateway identity and credentials."}
+          </p>
+
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={loading}
+            className="gateway-empty-button"
+          >
+            <RefreshCw size={17} />
+
+            {isRw
+              ? "Kora Gateway"
+              : "Generate Gateway"}
+          </button>
+
+        </section>
+      )}
+
+      {/* ========================================================
+          LOADING
+      ======================================================== */}
+
+      {loading && (
+        <section className="gateway-loading-state">
+
+          <RefreshCw
+            size={28}
+            className="gateway-spin"
+          />
+
+          <strong>
+            {isRw
+              ? "Turimo gukora Gateway..."
+              : "Generating gateway credentials..."}
+          </strong>
+
+          <span>
+            {isRw
+              ? "Tegereza gato."
+              : "Please wait a moment."}
+          </span>
+
+        </section>
+      )}
+
+      {/* ========================================================
+          CSS
+      ======================================================== */}
+
+      <style>{`
+
+        /* ======================================================
+           PAGE
+        ====================================================== */
+
+        .gateway-page {
+          width: 100%;
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 4px 0 40px;
+          color: var(--admin-text);
+        }
+
+        /* ======================================================
+           HEADER
+        ====================================================== */
+
+        .gateway-header {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 24px;
+        }
+
+        .gateway-header-text {
+          min-width: 0;
+        }
+
+        .gateway-breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 9px;
+          color: var(--admin-text-muted);
+          font-size: 12px;
+        }
+
+        .gateway-header h1 {
+          margin: 0;
+          font-size: 29px;
+          line-height: 1.2;
+          font-weight: 760;
+          letter-spacing: -.5px;
+        }
+
+        .gateway-header p {
+          margin: 7px 0 0;
+          color: var(--admin-text-muted);
+          font-size: 14px;
+          line-height: 1.55;
+        }
+
+        /* ======================================================
+           BUTTONS
+        ====================================================== */
+
+        .gateway-generate-button {
+          min-height: 43px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          flex-shrink: 0;
+          padding: 0 17px;
+          border: 1px solid var(--admin-accent);
+          border-radius: 9px;
+          background: var(--admin-accent);
+          color: #fff;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 700;
+          transition:
+            opacity .18s ease,
+            transform .18s ease;
+        }
+
+        .gateway-generate-button:hover {
+          opacity: .91;
+          transform: translateY(-1px);
+        }
+
+        .gateway-generate-button:disabled {
+          opacity: .55;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .gateway-primary-button,
+        .gateway-secondary-button,
+        .gateway-empty-button {
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 0 13px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 650;
+          transition: .18s ease;
+        }
+
+        .gateway-primary-button {
+          border: 1px solid var(--admin-accent);
+          background: var(--admin-accent);
+          color: white;
+        }
+
+        .gateway-primary-button:hover {
+          opacity: .9;
+        }
+
+        .gateway-primary-button:disabled {
+          opacity: .55;
+          cursor: not-allowed;
+        }
+
+        .gateway-secondary-button {
+          border: 1px solid var(--admin-border);
+          background: var(--admin-surface-subtle);
+          color: var(--admin-text);
+        }
+
+        .gateway-secondary-button:hover {
+          border-color: var(--admin-border-strong);
+        }
+
+        /* ======================================================
+           ALERTS
+        ====================================================== */
+
+        .gateway-alert {
+          min-height: 46px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 18px;
+          padding: 0 13px;
+          border-radius: 9px;
+          font-size: 13px;
+        }
+
+        .gateway-alert span {
+          flex: 1;
+        }
+
+        .gateway-alert button {
+          width: 28px;
+          height: 28px;
+          border: 0;
+          background: transparent;
+          color: inherit;
+          cursor: pointer;
+          font-size: 20px;
+        }
+
+        .gateway-alert-error {
+          border: 1px solid rgba(239, 107, 107, .25);
+          background: rgba(239, 107, 107, .06);
+          color: #ef8585;
+        }
+
+        .gateway-alert-success {
+          border: 1px solid rgba(69, 201, 130, .25);
+          background: rgba(69, 201, 130, .06);
+          color: #55ca88;
+        }
+
+        /* ======================================================
+           WORKSPACE
+        ====================================================== */
+
+        .gateway-workspace {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        .gateway-section {
+          border: 1px solid var(--admin-border);
+          border-radius: 14px;
+          background: var(--admin-surface);
+          overflow: hidden;
+        }
+
+        .gateway-section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          padding: 18px 20px;
+          border-bottom: 1px solid var(--admin-border);
+        }
+
+        .gateway-section-title {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          min-width: 0;
+        }
+
+        .gateway-section-icon {
+          width: 38px;
+          height: 38px;
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+          border-radius: 9px;
+          background: var(--admin-accent-soft);
+          color: var(--admin-accent);
+        }
+
+        .gateway-section-title h2 {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 720;
+        }
+
+        .gateway-section-title p {
+          margin: 4px 0 0;
+          color: var(--admin-text-muted);
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        /* ======================================================
+           READY STATUS
+        ====================================================== */
+
+        .gateway-ready-status {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 6px 9px;
+          border: 1px solid rgba(69, 201, 130, .2);
+          border-radius: 7px;
+          background: rgba(69, 201, 130, .06);
+          color: #4bc985;
+          font-size: 11px;
+          font-weight: 750;
+        }
+
+        .gateway-ready-status > span,
+        .gateway-status-ready > span {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: currentColor;
+        }
+
+        /* ======================================================
+           INFORMATION
+        ====================================================== */
+
+        .gateway-information-list {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .gateway-credential-row,
+        .gateway-information-simple {
+          min-height: 82px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          padding: 14px 20px;
+          border-bottom: 1px solid var(--admin-border);
+        }
+
+        .gateway-credential-label {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          min-width: 190px;
+        }
+
+        .gateway-credential-icon {
+          width: 34px;
+          height: 34px;
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+          border: 1px solid var(--admin-border);
+          border-radius: 8px;
+          color: var(--admin-text-muted);
+        }
+
+        .gateway-credential-label > div:last-child {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .gateway-credential-label span {
+          color: var(--admin-text);
+          font-size: 13px;
+          font-weight: 650;
+        }
+
+        .gateway-credential-label small {
+          color: var(--admin-text-muted);
+          font-size: 11px;
+        }
+
+        .gateway-value-area {
+          max-width: 65%;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .gateway-value-area code {
+          display: block;
+          max-width: 100%;
+          overflow-wrap: anywhere;
+          color: var(--admin-text);
+          font-family:
+            ui-monospace,
+            SFMono-Regular,
+            Menlo,
+            Monaco,
+            Consolas,
+            monospace;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .gateway-value-actions {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+
+        .gateway-value-actions button {
+          width: 32px;
+          height: 32px;
+          display: grid;
+          place-items: center;
+          border: 1px solid var(--admin-border);
+          border-radius: 7px;
+          background: var(--admin-surface-subtle);
+          color: var(--admin-text-muted);
+          cursor: pointer;
+        }
+
+        .gateway-value-actions button:hover {
+          color: var(--admin-accent);
+          border-color: var(--admin-accent);
+        }
+
+        .gateway-information-simple {
+          min-height: 70px;
+        }
+
+        .gateway-information-simple > div {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .gateway-simple-label {
+          color: var(--admin-text-muted);
+          font-size: 11px;
+        }
+
+        .gateway-simple-value {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          color: #4bc985;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        /* ======================================================
+           SECURITY NOTE
+        ====================================================== */
+
+        .gateway-security-note {
+          display: flex;
+          gap: 11px;
+          margin: 18px 20px 20px;
+          padding: 13px;
+          border: 1px solid var(--admin-border);
+          border-radius: 9px;
+          background: var(--admin-surface-subtle);
+        }
+
+        .gateway-security-note > svg {
+          flex-shrink: 0;
+          margin-top: 1px;
+          color: var(--admin-accent);
+        }
+
+        .gateway-security-note strong {
+          display: block;
+          margin-bottom: 4px;
+          color: var(--admin-text);
+          font-size: 12px;
+        }
+
+        .gateway-security-note p {
+          margin: 0;
+          color: var(--admin-text-muted);
+          font-size: 11px;
+          line-height: 1.6;
+        }
+
+        /* ======================================================
+           QR
+        ====================================================== */
+
+        .gateway-qr-content {
+          display: flex;
+          align-items: center;
+          gap: 32px;
+          padding: 25px 20px;
+        }
+
+        .gateway-qr-box {
+          width: 230px;
+          height: 230px;
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+          padding: 18px;
+          border: 1px solid var(--admin-border);
+          border-radius: 12px;
+          background: white;
+        }
+
+        .gateway-qr-description {
+          max-width: 560px;
+        }
+
+        .gateway-qr-token-title {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: var(--admin-accent);
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .gateway-qr-description p {
+          margin: 8px 0 18px;
+          color: var(--admin-text-muted);
+          font-size: 12px;
+          line-height: 1.7;
+        }
+
+        .gateway-qr-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 9px;
+        }
+
+        /* ======================================================
+           EMPTY STATE
+        ====================================================== */
+
+        .gateway-empty-state {
+          min-height: 330px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 35px 20px;
+          border: 1px dashed var(--admin-border);
+          border-radius: 14px;
+          background: var(--admin-surface);
+          text-align: center;
+        }
+
+        .gateway-empty-icon {
+          width: 62px;
+          height: 62px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 15px;
+          border-radius: 50%;
+          background: var(--admin-accent-soft);
+          color: var(--admin-accent);
+        }
+
+        .gateway-empty-state h2 {
+          margin: 0;
+          font-size: 17px;
+        }
+
+        .gateway-empty-state p {
+          max-width: 450px;
+          margin: 7px 0 18px;
+          color: var(--admin-text-muted);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .gateway-empty-button {
+          border: 1px solid var(--admin-accent);
+          background: var(--admin-accent);
+          color: white;
+        }
+
+        /* ======================================================
+           LOADING
+        ====================================================== */
+
+        .gateway-loading-state {
+          min-height: 250px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border: 1px solid var(--admin-border);
+          border-radius: 14px;
+          background: var(--admin-surface);
+          color: var(--admin-accent);
+        }
+
+        .gateway-loading-state strong {
+          color: var(--admin-text);
+          font-size: 14px;
+        }
+
+        .gateway-loading-state span {
+          color: var(--admin-text-muted);
+          font-size: 12px;
+        }
+
+        /* ======================================================
+           ANIMATION
+        ====================================================== */
+
+        .gateway-spin {
+          animation: gateway-spin 1s linear infinite;
+        }
+
+        @keyframes gateway-spin {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        /* ======================================================
+           RESPONSIVE
+        ====================================================== */
+
+        @media (max-width: 850px) {
+
+          .gateway-header {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .gateway-generate-button {
+            width: 100%;
+          }
+
+          .gateway-qr-content {
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+          }
+
+          .gateway-qr-description {
+            max-width: 600px;
+          }
+
+          .gateway-qr-token-title {
+            justify-content: center;
+          }
+
+          .gateway-qr-actions {
+            justify-content: center;
+          }
+
+        }
+
+        @media (max-width: 650px) {
+
+          .gateway-header h1 {
+            font-size: 25px;
+          }
+
+          .gateway-section-header {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .gateway-ready-status {
+            align-self: flex-start;
+          }
+
+          .gateway-credential-row {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .gateway-credential-label {
+            min-width: 0;
+          }
+
+          .gateway-value-area {
+            width: 100%;
+            max-width: none;
+          }
+
+          .gateway-value-area code {
+            flex: 1;
+          }
+
+          .gateway-information-simple {
+            align-items: flex-start;
+          }
+
+          .gateway-qr-box {
+            width: 210px;
+            height: 210px;
+          }
+
+        }
+
+        @media (max-width: 450px) {
+
+          .gateway-page {
+            padding-bottom: 25px;
+          }
+
+          .gateway-section-header {
+            padding: 15px;
+          }
+
+          .gateway-credential-row,
+          .gateway-information-simple {
+            padding: 14px 15px;
+          }
+
+          .gateway-security-note {
+            margin: 15px;
+          }
+
+          .gateway-qr-content {
+            padding: 20px 15px;
+          }
+
+          .gateway-qr-box {
+            width: 190px;
+            height: 190px;
+          }
+
+          .gateway-qr-actions {
+            width: 100%;
+            flex-direction: column;
+          }
+
+          .gateway-primary-button,
+          .gateway-secondary-button {
+            width: 100%;
+          }
+
+        }
+
+      `}</style>
+    </div>
+  );
 }
 
-);
 
-
-
-const url =
-window.URL.createObjectURL(
-response.data
-);
-
-
-
-const link =
-document.createElement("a");
-
-
-link.href=url;
-
-
-link.download =
-`${gateway.gatewayId}.pdf`;
-
-
-link.click();
-
-
-}
-catch(err){
-
-console.log(err);
-
-alert(
-"PDF download failed"
-);
-
-}
-
-};
-
-
-
-
-
- const qrData = gateway
-? JSON.stringify({
-
-gatewayId:
-gateway.gatewayId,
-
-qrToken:
-gateway.qrToken
-
-})
-:"";
-
-
-
-
-
-return (
-
-<div
-className="
-w-full
-space-y-6
-p-3
-sm:p-5
-lg:p-8
-"
->
-
-
-{/* HEADER */}
-
-<div
-className="
-flex
-flex-col
-gap-4
-sm:flex-row
-sm:items-center
-sm:justify-between
-"
->
-
-
-<div>
-
-
-<h1
-className="
-text-2xl
-sm:text-3xl
-font-bold
-text-white
-"
->
-
-Gateway Credentials Generator
-
-</h1>
-
-
-<p
-className="
-text-slate-400
-text-sm
-mt-1
-"
->
-
-Generate secure ANTIMATE Gateway identity
-
-</p>
-
-
-</div>
-
-
-
-
-
-<button
-
-onClick={handleGenerate}
-
-disabled={loading}
-
-className="
-flex
-items-center
-justify-center
-gap-2
-px-5
-py-3
-rounded-xl
-bg-gradient-to-r
-from-blue-500
-to-cyan-500
-hover:from-blue-600
-hover:to-cyan-600
-disabled:opacity-50
-transition
-font-semibold
-shadow-lg
-"
-
->
-
-
-<RefreshCw
-
-size={18}
-
-className={
-loading
-?
-"animate-spin"
-:
-""
-}
-
-/>
-
-
-
-{
-
-loading
-
-?
-
-"Generating..."
-
-:
-
-"Generate Gateway"
-
-}
-
-
-</button>
-
-
-
-</div>
-
-
-
-
-
-{
-gateway && (
-
-
-<div
-className="
-grid
-grid-cols-1
-lg:grid-cols-2
-gap-6
-"
->
-
-
-
-{/* INFORMATION */}
-
-<div
-className="
-bg-slate-900/60
-border
-border-white/10
-rounded-2xl
-p-5
-space-y-5
-"
->
-
-
-<h2
-className="
-text-lg
-font-semibold
-flex
-items-center
-gap-2
-text-blue-400
-"
->
-
-
-<Router size={20}/>
-
-
-Gateway Information
-
-
-</h2>
-
-
-
-
-
-<CredentialBox
-
-title="Gateway ID"
-
-value={gateway.gatewayId}
-
-type="id"
-
-copyText={copyText}
-
-copied={copied}
-
-/>
-
-
-
-
-
-<CredentialBox
-
-title="Gateway Default Key"
-
-value={gateway.defaultKey}
-
-type="key"
-
-copyText={copyText}
-
-copied={copied}
-
-/>
-
-
-
-
-
-<div>
-
-
-<p
-className="
-text-sm
-text-blue-400
-font-medium
-"
->
-
-Status
-
-</p>
-
-
-
-<span
-className="
-inline-block
-mt-2
-px-3
-py-1
-rounded-full
-bg-green-500/20
-text-green-400
-text-sm
-"
->
-
-READY
-
-</span>
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-{/* QR */}
-
-<div
-
-className="
-bg-slate-900/60
-border
-border-white/10
-rounded-2xl
-p-5
-flex
-flex-col
-items-center
-justify-center
-gap-4
-"
-
->
-
-
-<div
-className="
-flex
-items-center
-gap-2
-font-semibold
-text-blue-400
-"
->
-
-
-<QrCode size={20}/>
-
-
-QR Token
-
-
-</div>
-
-
-
-
-
-<div
-className="
-bg-white
-p-5
-rounded-xl
-"
->
-
-
-<QRCode
-
-value={qrData}
-
-size={190}
-
-/>
-
-
-</div>
-
-
-
-
-
-<p
-className="
-text-xs
-text-slate-400
-text-center
-"
->
-
-Scan this QR code to provision gateway.
-
-</p>
-
-
-
-
-
-<button
-  onClick={downloadPDF}
-  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95"
->
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  </svg>
-  Download PDF
-</button>
-
-
-</div>
-
-
-
-</div>
-
-
-)
-
-}
-
-
-
-
-
-
-{
-!gateway && (
-
-
-<div
-
-className="
-border
-border-dashed
-border-white/10
-rounded-2xl
-p-10
-text-center
-text-slate-400
-"
-
->
-
-
-<KeyRound
-
-size={40}
-
-className="
-mx-auto
-mb-3
-text-blue-400
-"
-
-/>
-
-
-<p>
-
-Click Generate Gateway to create credentials
-
-</p>
-
-
-</div>
-
-
-)
-
-}
-
-
-
-</div>
-
-
-);
-
-}
-
-
-
-
-
-
-
-function CredentialBox({
-
-title,
-
-value,
-
-type,
-
-copyText,
-
-copied
-
-}){
-
-
-return (
-
-<div>
-
-
-<p
-
-className="
-text-sm
-text-blue-400
-font-medium
-"
-
->
-
-{title}
-
-</p>
-
-
-
-
-
-<div
-
-className="
-mt-2
-flex
-items-center
-justify-between
-gap-3
-bg-black/30
-rounded-lg
-px-4
-py-3
-"
-
->
-
-
-<span
-
-className="
-font-mono
-font-semibold
-break-all
-text-white
-"
-
->
-
-{value}
-
-</span>
-
-
-
-
-
-<button
-
-onClick={()=>copyText(value,type)}
-
-className="
-text-blue-400
-hover:text-blue-300
-"
-
->
-
-
-{
-
-copied===type
-
-?
-
-<Check size={18}/>
-
-:
-
-<Copy size={18}/>
-
-}
-
-
-</button>
-
-
-
-
-</div>
-
-
-
-</div>
-
-
-);
-
-
+/* ================================================================
+   CREDENTIAL ROW
+================================================================ */
+
+function CredentialRow({
+  label,
+  value,
+  type,
+  copied,
+  onCopy,
+}) {
+  return (
+    <div className="gateway-credential-row">
+
+      <div className="gateway-credential-label">
+
+        <div className="gateway-credential-icon">
+          <Router size={16} />
+        </div>
+
+        <div>
+          <span>{label}</span>
+
+          <small>
+            Unique identifier for this gateway.
+          </small>
+        </div>
+
+      </div>
+
+      <div className="gateway-value-area">
+
+        <code>
+          {value || "—"}
+        </code>
+
+        <div className="gateway-value-actions">
+
+          <button
+            type="button"
+            onClick={() =>
+              onCopy(value, type)
+            }
+            title="Copy"
+          >
+            {copied === type ? (
+              <Check size={17} />
+            ) : (
+              <Copy size={17} />
+            )}
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
 }
