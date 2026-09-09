@@ -360,9 +360,9 @@ export default function Workers() {
 
           <button
             type="button"
-            className="workers-add-button"
+            className="workers-create-button"
             onClick={() =>
-              navigate("/workers/add")
+              navigate("/workers/create")
             }
           >
             <UserPlus size={17} />
