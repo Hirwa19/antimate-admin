@@ -946,7 +946,7 @@ export default function Workers() {
             <button
               type="button"
               onClick={() =>
-                navigate("/workers/add")
+                navigate("/workers/create")
               }
             >
               <UserPlus size={17} />
