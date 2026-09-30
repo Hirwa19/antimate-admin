@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   UserPlus,
   User,
-  CreditCard,
   Phone,
   Mail,
   Lock,
@@ -29,8 +28,8 @@ export default function CreateWorker() {
   const isRw = language === "rw";
 
   const [form, setForm] = useState({
-    fullName: "",
-    idNumber: "",
+    firstName: "",
+    secondName: "",
     phone: "",
     email: "",
     password: "",
@@ -39,12 +38,10 @@ export default function CreateWorker() {
   });
 
   const [otp, setOtp] = useState("");
-
   const [step, setStep] = useState("form");
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -54,10 +51,6 @@ export default function CreateWorker() {
 
   const [countdown, setCountdown] = useState(0);
 
-  /*
-   * Keep these roles synchronized with the roles
-   * accepted by your backend.
-   */
   const roles = useMemo(
     () => [
       "Admin",
@@ -104,16 +97,16 @@ export default function CreateWorker() {
   ============================================================ */
 
   const validateForm = () => {
-    if (!form.fullName.trim()) {
+    if (!form.firstName.trim()) {
       return isRw
-        ? "Andika amazina yuzuye y'umukozi."
-        : "Enter the worker's full name.";
+        ? "Andika First Name y'umukozi."
+        : "Enter the worker's first name.";
     }
 
-    if (!form.idNumber.trim()) {
+    if (!form.secondName.trim()) {
       return isRw
-        ? "Andika ID Number y'umukozi."
-        : "Enter the worker's ID number.";
+        ? "Andika Second Name y'umukozi."
+        : "Enter the worker's second name.";
     }
 
     if (!form.phone.trim()) {
@@ -140,10 +133,7 @@ export default function CreateWorker() {
         : "Password must contain at least 6 characters.";
     }
 
-    if (
-      form.password !==
-      form.confirmPassword
-    ) {
+    if (form.password !== form.confirmPassword) {
       return isRw
         ? "Passwords ntizihura."
         : "Passwords do not match.";
@@ -163,8 +153,7 @@ export default function CreateWorker() {
   ============================================================ */
 
   const sendOtp = async () => {
-    const validationError =
-      validateForm();
+    const validationError = validateForm();
 
     if (validationError) {
       setError(validationError);
@@ -176,20 +165,11 @@ export default function CreateWorker() {
       setError("");
       setSuccess("");
 
-      /*
-       * OTP endpoint:
-       *
-       * Replace only this endpoint if your backend
-       * uses a different OTP route.
-       *
-       * The worker is NOT created yet.
-       */
-
       const res = await api.post(
         "/workers/send-otp",
         {
-          phone: form.phone,
-          email: form.email,
+          phone: form.phone.trim(),
+          email: form.email.trim(),
         }
       );
 
@@ -199,7 +179,6 @@ export default function CreateWorker() {
       );
 
       setStep("otp");
-
       setCountdown(60);
 
       setSuccess(
@@ -210,8 +189,7 @@ export default function CreateWorker() {
     } catch (err) {
       console.error(
         "SEND WORKER OTP ERROR:",
-        err.response?.data ||
-          err.message
+        err.response?.data || err.message
       );
 
       setError(
@@ -255,18 +233,9 @@ export default function CreateWorker() {
       setError("");
       setSuccess("");
 
-      /*
-       * OTP is sent together with the worker creation
-       * request.
-       *
-       * This preserves the existing:
-       * POST /workers
-       * workflow.
-       */
-
       const payload = {
-        fullName: form.fullName.trim(),
-        idNumber: form.idNumber.trim(),
+        firstName: form.firstName.trim(),
+        secondName: form.secondName.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
         password: form.password,
@@ -291,12 +260,10 @@ export default function CreateWorker() {
       );
 
       setStep("created");
-
     } catch (err) {
       console.error(
         "CREATE WORKER ERROR:",
-        err.response?.data ||
-          err.message
+        err.response?.data || err.message
       );
 
       setError(
@@ -315,9 +282,7 @@ export default function CreateWorker() {
   ============================================================ */
 
   const resendOtp = async () => {
-    if (countdown > 0) {
-      return;
-    }
+    if (countdown > 0) return;
 
     await sendOtp();
   };
@@ -328,8 +293,8 @@ export default function CreateWorker() {
 
   const createAnother = () => {
     setForm({
-      fullName: "",
-      idNumber: "",
+      firstName: "",
+      secondName: "",
       phone: "",
       email: "",
       password: "",
@@ -338,20 +303,16 @@ export default function CreateWorker() {
     });
 
     setOtp("");
-
     setStep("form");
-
     setError("");
     setSuccess("");
-
     setCountdown(0);
   };
 
-  /* ============================================================
-     INPUT
-  ============================================================ */
-
   const inputClass = "worker-form-input";
+
+  const workerFullName =
+    `${form.firstName} ${form.secondName}`.trim();
 
   return (
     <div className="create-worker-page">
@@ -396,13 +357,10 @@ export default function CreateWorker() {
 
         </div>
 
-
         <button
           type="button"
           className="worker-back-button"
-          onClick={() =>
-            navigate("/workers")
-          }
+          onClick={() => navigate("/workers")}
         >
           <ArrowLeft size={17} />
 
@@ -412,7 +370,6 @@ export default function CreateWorker() {
         </button>
 
       </header>
-
 
       {/* ======================================================
           ALERTS
@@ -427,16 +384,13 @@ export default function CreateWorker() {
 
           <button
             type="button"
-            onClick={() =>
-              setError("")
-            }
+            onClick={() => setError("")}
           >
             ×
           </button>
 
         </div>
       )}
-
 
       {success && (
         <div className="worker-alert worker-alert-success">
@@ -447,16 +401,13 @@ export default function CreateWorker() {
 
           <button
             type="button"
-            onClick={() =>
-              setSuccess("")
-            }
+            onClick={() => setSuccess("")}
           >
             ×
           </button>
 
         </div>
       )}
-
 
       {/* ======================================================
           CREATED
@@ -477,8 +428,8 @@ export default function CreateWorker() {
 
           <p>
             {isRw
-              ? `${form.fullName} yamaze gushyirwa muri ANTIMATE Staff.`
-              : `${form.fullName} has been added to ANTIMATE Staff.`}
+              ? `${workerFullName} yamaze gushyirwa muri ANTIMATE Staff.`
+              : `${workerFullName} has been added to ANTIMATE Staff.`}
           </p>
 
           <div className="worker-created-actions">
@@ -486,9 +437,7 @@ export default function CreateWorker() {
             <button
               type="button"
               className="worker-secondary-button"
-              onClick={() =>
-                navigate("/workers")
-              }
+              onClick={() => navigate("/workers")}
             >
               <ArrowLeft size={16} />
 
@@ -514,14 +463,12 @@ export default function CreateWorker() {
         </section>
       )}
 
-
       {/* ======================================================
           MAIN FORM
       ====================================================== */}
 
       {step !== "created" && (
         <div className="create-worker-workspace">
-
 
           {/* ==================================================
               PROGRESS
@@ -553,9 +500,7 @@ export default function CreateWorker() {
               </div>
             </div>
 
-
             <div className="worker-progress-line" />
-
 
             <div
               className={
@@ -580,7 +525,6 @@ export default function CreateWorker() {
             </div>
 
           </div>
-
 
           {/* ==================================================
               FORM
@@ -611,78 +555,70 @@ export default function CreateWorker() {
 
               </div>
 
-
               <div className="worker-form-body">
 
-
-                {/* FULL NAME */}
+                {/* FIRST NAME */}
 
                 <FormField
                   icon={<User size={16} />}
                   label={
                     isRw
-                      ? "Amazina yuzuye"
-                      : "Full Name"
+                      ? "First Name"
+                      : "First Name"
                   }
                   required
                 >
                   <input
                     className={inputClass}
-                    value={form.fullName}
+                    value={form.firstName}
                     onChange={(e) =>
                       updateField(
-                        "fullName",
+                        "firstName",
                         e.target.value
                       )
                     }
                     placeholder={
                       isRw
-                        ? "Urugero: Hirwa Salem"
-                        : "e.g. John Doe"
+                        ? "Urugero: Hirwa"
+                        : "e.g. John"
                     }
-                    autoComplete="name"
+                    autoComplete="given-name"
                   />
                 </FormField>
 
-
-                {/* ID */}
+                {/* SECOND NAME */}
 
                 <FormField
-                  icon={
-                    <CreditCard size={16} />
-                  }
+                  icon={<User size={16} />}
                   label={
                     isRw
-                      ? "ID Number"
-                      : "ID Number"
+                      ? "Second Name"
+                      : "Second Name"
                   }
                   required
                 >
                   <input
                     className={inputClass}
-                    value={form.idNumber}
+                    value={form.secondName}
                     onChange={(e) =>
                       updateField(
-                        "idNumber",
+                        "secondName",
                         e.target.value
                       )
                     }
                     placeholder={
                       isRw
-                        ? "Andika ID Number"
-                        : "Enter ID number"
+                        ? "Urugero: Salem"
+                        : "e.g. Doe"
                     }
-                    autoComplete="off"
+                    autoComplete="family-name"
                   />
                 </FormField>
-
 
                 {/* PHONE */}
 
                 <FormField
-                  icon={
-                    <Phone size={16} />
-                  }
+                  icon={<Phone size={16} />}
                   label={
                     isRw
                       ? "Telefone"
@@ -705,13 +641,10 @@ export default function CreateWorker() {
                   />
                 </FormField>
 
-
                 {/* EMAIL */}
 
                 <FormField
-                  icon={
-                    <Mail size={16} />
-                  }
+                  icon={<Mail size={16} />}
                   label="Email"
                   required
                 >
@@ -730,18 +663,11 @@ export default function CreateWorker() {
                   />
                 </FormField>
 
-
                 {/* PASSWORD */}
 
                 <FormField
-                  icon={
-                    <Lock size={16} />
-                  }
-                  label={
-                    isRw
-                      ? "Password"
-                      : "Password"
-                  }
+                  icon={<Lock size={16} />}
+                  label="Password"
                   required
                 >
                   <div className="worker-password-input">
@@ -786,13 +712,10 @@ export default function CreateWorker() {
                   </div>
                 </FormField>
 
-
                 {/* CONFIRM PASSWORD */}
 
                 <FormField
-                  icon={
-                    <Lock size={16} />
-                  }
+                  icon={<Lock size={16} />}
                   label={
                     isRw
                       ? "Emeza Password"
@@ -809,9 +732,7 @@ export default function CreateWorker() {
                           : "password"
                       }
                       className={inputClass}
-                      value={
-                        form.confirmPassword
-                      }
+                      value={form.confirmPassword}
                       onChange={(e) =>
                         updateField(
                           "confirmPassword",
@@ -844,17 +765,13 @@ export default function CreateWorker() {
                   </div>
                 </FormField>
 
-
                 {/* ROLE */}
 
                 <FormField
-                  icon={
-                    <ShieldCheck size={16} />
-                  }
+                  icon={<ShieldCheck size={16} />}
                   label="Role"
                   required
                 >
-
                   <div className="worker-select-wrapper">
 
                     <select
@@ -873,29 +790,23 @@ export default function CreateWorker() {
                           : "Select Role"}
                       </option>
 
-                      {roles.map(
-                        (role) => (
-                          <option
-                            key={role}
-                            value={role}
-                          >
-                            {role}
-                          </option>
-                        )
-                      )}
+                      {roles.map((role) => (
+                        <option
+                          key={role}
+                          value={role}
+                        >
+                          {role}
+                        </option>
+                      ))}
 
                     </select>
 
-                    <ChevronDown
-                      size={16}
-                    />
+                    <ChevronDown size={16} />
 
                   </div>
-
                 </FormField>
 
               </div>
-
 
               {/* SECURITY NOTE */}
 
@@ -906,9 +817,7 @@ export default function CreateWorker() {
                 <div>
 
                   <strong>
-                    {isRw
-                      ? "OTP verification"
-                      : "OTP verification"}
+                    OTP verification
                   </strong>
 
                   <p>
@@ -921,7 +830,6 @@ export default function CreateWorker() {
 
               </div>
 
-
               {/* ACTION */}
 
               <div className="worker-form-footer">
@@ -929,9 +837,7 @@ export default function CreateWorker() {
                 <button
                   type="button"
                   className="worker-secondary-button"
-                  onClick={() =>
-                    navigate("/workers")
-                  }
+                  onClick={() => navigate("/workers")}
                 >
                   <ArrowLeft size={16} />
 
@@ -939,7 +845,6 @@ export default function CreateWorker() {
                     ? "Kureka"
                     : "Cancel"}
                 </button>
-
 
                 <button
                   type="button"
@@ -976,7 +881,6 @@ export default function CreateWorker() {
             </section>
           )}
 
-
           {/* ==================================================
               OTP
           ================================================== */}
@@ -1004,7 +908,6 @@ export default function CreateWorker() {
                   : `Enter the OTP sent to ${form.phone}.`}
               </p>
 
-
               <div className="worker-otp-input-wrapper">
 
                 <input
@@ -1012,10 +915,7 @@ export default function CreateWorker() {
                   onChange={(e) => {
                     const value =
                       e.target.value
-                        .replace(
-                          /[^0-9]/g,
-                          ""
-                        )
+                        .replace(/[^0-9]/g, "")
                         .slice(0, 6);
 
                     setOtp(value);
@@ -1029,7 +929,6 @@ export default function CreateWorker() {
                 />
 
               </div>
-
 
               <div className="worker-otp-meta">
 
@@ -1045,12 +944,8 @@ export default function CreateWorker() {
                   ) : (
                     <button
                       type="button"
-                      onClick={
-                        resendOtp
-                      }
-                      disabled={
-                        sendingOtp
-                      }
+                      onClick={resendOtp}
+                      disabled={sendingOtp}
                     >
                       {sendingOtp ? (
                         <>
@@ -1065,9 +960,7 @@ export default function CreateWorker() {
                         </>
                       ) : (
                         <>
-                          <RefreshCw
-                            size={14}
-                          />
+                          <RefreshCw size={14} />
 
                           {isRw
                             ? "Ongera wohereze OTP"
@@ -1081,7 +974,6 @@ export default function CreateWorker() {
 
               </div>
 
-
               <div className="worker-otp-summary">
 
                 <div>
@@ -1092,7 +984,7 @@ export default function CreateWorker() {
                   </span>
 
                   <strong>
-                    {form.fullName}
+                    {workerFullName}
                   </strong>
                 </div>
 
@@ -1120,7 +1012,6 @@ export default function CreateWorker() {
 
               </div>
 
-
               <div className="worker-otp-actions">
 
                 <button
@@ -1141,13 +1032,10 @@ export default function CreateWorker() {
                     : "Edit information"}
                 </button>
 
-
                 <button
                   type="button"
                   className="worker-primary-button"
-                  onClick={
-                    createWorker
-                  }
+                  onClick={createWorker}
                   disabled={
                     loading ||
                     otp.length < 4
@@ -1167,9 +1055,7 @@ export default function CreateWorker() {
                     </>
                   ) : (
                     <>
-                      <CheckCircle2
-                        size={16}
-                      />
+                      <CheckCircle2 size={16} />
 
                       {isRw
                         ? "Emeza & Kora Worker"
@@ -1187,7 +1073,6 @@ export default function CreateWorker() {
         </div>
       )}
 
-
       {/* ======================================================
           CSS
       ====================================================== */}
@@ -1201,11 +1086,6 @@ export default function CreateWorker() {
           padding: 4px 0 40px;
           color: var(--admin-text);
         }
-
-
-        /* =====================================================
-           HEADER
-        ===================================================== */
 
         .create-worker-header {
           display: flex;
@@ -1239,7 +1119,6 @@ export default function CreateWorker() {
           line-height: 1.55;
         }
 
-
         .worker-back-button {
           min-height: 40px;
           display: inline-flex;
@@ -1260,11 +1139,6 @@ export default function CreateWorker() {
           border-color: var(--admin-accent);
           color: var(--admin-accent);
         }
-
-
-        /* =====================================================
-           ALERTS
-        ===================================================== */
 
         .worker-alert {
           min-height: 45px;
@@ -1305,21 +1179,11 @@ export default function CreateWorker() {
           color: #55ca88;
         }
 
-
-        /* =====================================================
-           WORKSPACE
-        ===================================================== */
-
         .create-worker-workspace {
           display: flex;
           flex-direction: column;
           gap: 16px;
         }
-
-
-        /* =====================================================
-           PROGRESS
-        ===================================================== */
 
         .worker-progress {
           display: flex;
@@ -1389,11 +1253,6 @@ export default function CreateWorker() {
           background: var(--admin-border);
         }
 
-
-        /* =====================================================
-           FORM SECTION
-        ===================================================== */
-
         .worker-form-section {
           border: 1px solid var(--admin-border);
           border-radius: 12px;
@@ -1433,11 +1292,6 @@ export default function CreateWorker() {
           line-height: 1.5;
         }
 
-
-        /* =====================================================
-           FORM BODY
-        ===================================================== */
-
         .worker-form-body {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1469,7 +1323,6 @@ export default function CreateWorker() {
           color: #ef7777;
         }
 
-
         .worker-form-input {
           width: 100%;
           height: 42px;
@@ -1497,7 +1350,6 @@ export default function CreateWorker() {
             0 0 0 3px
             var(--admin-accent-soft);
         }
-
 
         .worker-password-input {
           position: relative;
@@ -1527,11 +1379,6 @@ export default function CreateWorker() {
           color: var(--admin-accent);
         }
 
-
-        /* =====================================================
-           SELECT
-        ===================================================== */
-
         .worker-select-wrapper {
           position: relative;
         }
@@ -1550,11 +1397,6 @@ export default function CreateWorker() {
           pointer-events: none;
           color: var(--admin-text-muted);
         }
-
-
-        /* =====================================================
-           SECURITY NOTE
-        ===================================================== */
 
         .worker-security-note {
           display: flex;
@@ -1583,11 +1425,6 @@ export default function CreateWorker() {
           font-size: 10px;
           line-height: 1.6;
         }
-
-
-        /* =====================================================
-           FOOTER
-        ===================================================== */
 
         .worker-form-footer {
           display: flex;
@@ -1638,11 +1475,6 @@ export default function CreateWorker() {
           cursor: not-allowed;
         }
 
-
-        /* =====================================================
-           OTP
-        ===================================================== */
-
         .worker-otp-section {
           max-width: 650px;
           width: 100%;
@@ -1685,7 +1517,6 @@ export default function CreateWorker() {
           line-height: 1.6;
         }
 
-
         .worker-otp-input-wrapper {
           max-width: 330px;
           margin: 22px auto 10px;
@@ -1720,7 +1551,6 @@ export default function CreateWorker() {
             var(--admin-accent-soft);
         }
 
-
         .worker-otp-meta {
           display: flex;
           justify-content: center;
@@ -1751,7 +1581,6 @@ export default function CreateWorker() {
           opacity: .5;
           cursor: not-allowed;
         }
-
 
         .worker-otp-summary {
           display: flex;
@@ -1790,17 +1619,11 @@ export default function CreateWorker() {
           font-size: 11px;
         }
 
-
         .worker-otp-actions {
           display: flex;
           justify-content: center;
           gap: 8px;
         }
-
-
-        /* =====================================================
-           CREATED
-        ===================================================== */
 
         .worker-created {
           min-height: 350px;
@@ -1842,11 +1665,6 @@ export default function CreateWorker() {
           gap: 8px;
         }
 
-
-        /* =====================================================
-           ANIMATION
-        ===================================================== */
-
         .worker-spin {
           animation: worker-spin 1s linear infinite;
         }
@@ -1860,11 +1678,6 @@ export default function CreateWorker() {
             transform: rotate(360deg);
           }
         }
-
-
-        /* =====================================================
-           RESPONSIVE
-        ===================================================== */
 
         @media (max-width: 800px) {
 
@@ -1890,7 +1703,6 @@ export default function CreateWorker() {
           }
 
         }
-
 
         @media (max-width: 600px) {
 
@@ -1971,7 +1783,6 @@ export default function CreateWorker() {
 
         }
 
-
         @media (max-width: 400px) {
 
           .worker-otp-input {
@@ -1987,7 +1798,6 @@ export default function CreateWorker() {
     </div>
   );
 }
-
 
 /* ============================================================
    FORM FIELD
