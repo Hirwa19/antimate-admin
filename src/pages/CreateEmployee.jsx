@@ -1,9 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useAppSettings } from "../context/AppSettingsContext";
 
 export default function CreateEmployee() {
   const navigate = useNavigate();
+
+  const {
+    language,
+    theme,
+    t,
+  } = useAppSettings();
+
+  const isDark = theme === "dark";
 
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -37,6 +50,250 @@ export default function CreateEmployee() {
 
     otp: "",
   });
+
+  // ============================================================
+  // TRANSLATIONS
+  // ============================================================
+
+  const translations = {
+    en: {
+      createEmployee: "Create Employee",
+      createEmployeeDescription:
+        "Add a new employee to the ANTIMATE organization.",
+      backToEmployees: "Back to Employees",
+
+      personalInformation: "Personal Information",
+      personalInformationDescription:
+        "Basic information about the employee.",
+
+      firstName: "First Name",
+      secondName: "Second Name",
+      phone: "Phone",
+      email: "Email",
+      password: "Password",
+
+      enterFirstName: "Enter first name",
+      enterSecondName: "Enter second name",
+      phonePlaceholder: "e.g. 0780000000",
+      emailPlaceholder: "employee@example.com",
+      minimumPassword: "Minimum 6 characters",
+
+      passwordHelp:
+        "The employee will use this password when signing in.",
+
+      organization: "Organization",
+      organizationDescription:
+        "Define where the employee belongs within ANTIMATE.",
+
+      department: "Department",
+      position: "Position",
+      team: "Team",
+      manager: "Manager",
+      employmentType: "Employment Type",
+      accessLevel: "Access Level",
+
+      selectDepartment: "Select department",
+      selectDepartmentFirst: "Select department first",
+      noPositions: "No positions available",
+      selectPosition: "Select position",
+      noTeams: "No teams available",
+      selectTeam: "Select team",
+      noManager: "No manager",
+
+      fullTime: "Full Time",
+      partTime: "Part Time",
+      contract: "Contract",
+      intern: "Intern",
+      volunteer: "Volunteer",
+      temporary: "Temporary",
+
+      staff: "Staff",
+      limited: "Limited",
+      managerLevel: "Manager",
+      adminLevel: "Admin",
+      superadmin: "Superadmin",
+
+      accessLevelHelp:
+        "Controls the employee's system access level.",
+
+      phoneVerification: "Phone Verification",
+      phoneVerificationDescription:
+        "Verify the employee's phone before creating the account.",
+
+      verificationOTP: "Verification OTP",
+      enterOTP: "Enter 4-digit OTP",
+      sendOTP: "Send OTP",
+      resendOTP: "Resend OTP",
+      sending: "Sending...",
+
+      otpSent:
+        "OTP has been sent successfully.",
+      otpSentPhone:
+        "OTP sent successfully. Check the employee's phone.",
+      otpGatewayHelp:
+        'Click "Send OTP" to send a verification code through the ANTIMATE Gateway.',
+
+      loadingOrganization:
+        "Loading organization structure...",
+
+      clear: "Clear",
+      creatingEmployee: "Creating Employee...",
+      createEmployeeButton: "Create Employee",
+
+      required: "Required",
+
+      firstSecondRequired:
+        "First name and second name are required.",
+      phoneRequired:
+        "Phone number is required.",
+      emailRequired:
+        "Email address is required.",
+      passwordRequired:
+        "Password must contain at least 6 characters.",
+      departmentRequired:
+        "Please select a department.",
+      positionRequired:
+        "Please select a position.",
+      teamRequired:
+        "Please select a team.",
+      otpRequired:
+        "Please enter the OTP.",
+      otpInvalid:
+        "OTP must contain exactly 4 digits.",
+
+      failedLoad:
+        "Failed to load organization data.",
+      failedSendOTP:
+        "Failed to send OTP.",
+      employeeCreated:
+        "Employee created successfully.",
+      failedCreate:
+        "Failed to create employee.",
+    },
+
+    rw: {
+      createEmployee: "Kora Umukozi",
+      createEmployeeDescription:
+        "Ongeramo umukozi mushya muri ANTIMATE.",
+      backToEmployees: "Subira ku Bakozi",
+
+      personalInformation: "Amakuru y’Umukozi",
+      personalInformationDescription:
+        "Amakuru y’ibanze y’umukozi.",
+
+      firstName: "Izina rya mbere",
+      secondName: "Izina rya kabiri",
+      phone: "Telefoni",
+      email: "Imeyili",
+      password: "Ijambobanga",
+
+      enterFirstName: "Andika izina rya mbere",
+      enterSecondName: "Andika izina rya kabiri",
+      phonePlaceholder: "urugero: 0780000000",
+      emailPlaceholder: "employee@example.com",
+      minimumPassword: "Nibura inyuguti 6",
+
+      passwordHelp:
+        "Umukozi azakoresha iri jambobanga igihe yinjira muri sisitemu.",
+
+      organization: "Imiterere y’Ikigo",
+      organizationDescription:
+        "Garagaza aho umukozi abarizwa muri ANTIMATE.",
+
+      department: "Ishami",
+      position: "Umwanya",
+      team: "Itsinda",
+      manager: "Umuyobozi",
+      employmentType: "Ubwoko bw’Akazi",
+      accessLevel: "Urwego rw’Uburenganzira",
+
+      selectDepartment: "Hitamo ishami",
+      selectDepartmentFirst: "Banza uhitemo ishami",
+      noPositions: "Nta myanya ihari",
+      selectPosition: "Hitamo umwanya",
+      noTeams: "Nta matsinda ahari",
+      selectTeam: "Hitamo itsinda",
+      noManager: "Nta muyobozi",
+
+      fullTime: "Igihe cyose",
+      partTime: "Igice cy’igihe",
+      contract: "Amasezerano",
+      intern: "Umunyeshuri uri muri stage",
+      volunteer: "Umukorerabushake",
+      temporary: "Igihe gito",
+
+      staff: "Umukozi",
+      limited: "Uburenganzira buke",
+      managerLevel: "Umuyobozi",
+      adminLevel: "Admin",
+      superadmin: "Superadmin",
+
+      accessLevelHelp:
+        "Igena urwego rw’uburenganzira umukozi afite muri sisitemu.",
+
+      phoneVerification: "Kwemeza Telefoni",
+      phoneVerificationDescription:
+        "Emeza telefoni y’umukozi mbere yo gukora konti.",
+
+      verificationOTP: "OTP yo Kwemeza",
+      enterOTP: "Andika OTP y’imibare 4",
+      sendOTP: "Ohereza OTP",
+      resendOTP: "Ongera wohereze OTP",
+      sending: "Birimo koherezwa...",
+
+      otpSent:
+        "OTP yoherejwe neza.",
+      otpSentPhone:
+        "OTP yoherejwe neza. Reba telefoni y’umukozi.",
+      otpGatewayHelp:
+        'Kanda "Ohereza OTP" kugira ngo kode yo kwemeza yoherezwe binyuze kuri ANTIMATE Gateway.',
+
+      loadingOrganization:
+        "Imiterere y’ikigo irimo gutegurwa...",
+
+      clear: "Siba",
+      creatingEmployee: "Umukozi ari gukorwa...",
+      createEmployeeButton: "Kora Umukozi",
+
+      required: "Birakenewe",
+
+      firstSecondRequired:
+        "Izina rya mbere n’izina rya kabiri birakenewe.",
+      phoneRequired:
+        "Numero ya telefoni irakenewe.",
+      emailRequired:
+        "Imeyili irakenewe.",
+      passwordRequired:
+        "Ijambobanga rigomba kuba rifite nibura inyuguti 6.",
+      departmentRequired:
+        "Hitamo ishami.",
+      positionRequired:
+        "Hitamo umwanya.",
+      teamRequired:
+        "Hitamo itsinda.",
+      otpRequired:
+        "Andika OTP.",
+      otpInvalid:
+        "OTP igomba kuba igizwe n’imibare 4 gusa.",
+
+      failedLoad:
+        "Kugera ku makuru y’imiterere y’ikigo byanze.",
+      failedSendOTP:
+        "Kohereza OTP byanze.",
+      employeeCreated:
+        "Umukozi yakozwe neza.",
+      failedCreate:
+        "Gukora umukozi byanze.",
+    },
+  };
+
+  const tr = (key) => {
+    return (
+      translations[language]?.[key] ||
+      translations.en[key] ||
+      key
+    );
+  };
 
   // ============================================================
   // LOAD ORGANIZATION DATA
@@ -94,7 +351,7 @@ export default function CreateEmployee() {
 
       setError(
         err.response?.data?.message ||
-          "Failed to load organization data."
+          tr("failedLoad")
       );
     } finally {
       setLoadingData(false);
@@ -116,7 +373,6 @@ export default function CreateEmployee() {
     setError("");
     setMessage("");
 
-    // Department changed
     if (name === "department") {
       setForm((prev) => ({
         ...prev,
@@ -136,18 +392,16 @@ export default function CreateEmployee() {
       return [];
     }
 
-    return positions.filter(
-      (position) => {
-        const departmentId =
-          position.department?._id ||
-          position.department;
+    return positions.filter((position) => {
+      const departmentId =
+        position.department?._id ||
+        position.department;
 
-        return (
-          String(departmentId) ===
-          String(form.department)
-        );
-      }
-    );
+      return (
+        String(departmentId) ===
+        String(form.department)
+      );
+    });
   }, [
     positions,
     form.department,
@@ -162,18 +416,16 @@ export default function CreateEmployee() {
       return [];
     }
 
-    return teams.filter(
-      (team) => {
-        const departmentId =
-          team.department?._id ||
-          team.department;
+    return teams.filter((team) => {
+      const departmentId =
+        team.department?._id ||
+        team.department;
 
-        return (
-          String(departmentId) ===
-          String(form.department)
-        );
-      }
-    );
+      return (
+        String(departmentId) ===
+        String(form.department)
+      );
+    });
   }, [
     teams,
     form.department,
@@ -202,12 +454,12 @@ export default function CreateEmployee() {
     setMessage("");
 
     if (!form.phone.trim()) {
-      setError("Phone number is required.");
+      setError(tr("phoneRequired"));
       return;
     }
 
     if (!form.email.trim()) {
-      setError("Email address is required.");
+      setError(tr("emailRequired"));
       return;
     }
 
@@ -229,13 +481,11 @@ export default function CreateEmployee() {
           response.data.expiresIn || 300
         );
 
-        setMessage(
-          "OTP sent successfully. Check the employee's phone."
-        );
+        setMessage(tr("otpSentPhone"));
       } else {
         setError(
           response.data?.message ||
-            "Failed to send OTP."
+            tr("failedSendOTP")
         );
       }
     } catch (err) {
@@ -246,7 +496,7 @@ export default function CreateEmployee() {
 
       setError(
         err.response?.data?.message ||
-          "Failed to send OTP."
+          tr("failedSendOTP")
       );
     } finally {
       setSendingOTP(false);
@@ -307,61 +557,61 @@ export default function CreateEmployee() {
     setError("");
     setMessage("");
 
-    // ----------------------------------------------------------
-    // Frontend validation
-    // ----------------------------------------------------------
-
     if (
       !form.firstName.trim() ||
       !form.secondName.trim()
     ) {
       setError(
-        "First name and second name are required."
+        tr("firstSecondRequired")
       );
       return;
     }
 
     if (!form.phone.trim()) {
-      setError("Phone number is required.");
+      setError(tr("phoneRequired"));
       return;
     }
 
     if (!form.email.trim()) {
-      setError("Email address is required.");
+      setError(tr("emailRequired"));
       return;
     }
 
     if (form.password.length < 6) {
       setError(
-        "Password must contain at least 6 characters."
+        tr("passwordRequired")
       );
       return;
     }
 
     if (!form.department) {
-      setError("Please select a department.");
+      setError(
+        tr("departmentRequired")
+      );
       return;
     }
 
     if (!form.position) {
-      setError("Please select a position.");
+      setError(
+        tr("positionRequired")
+      );
       return;
     }
 
     if (!form.team) {
-      setError("Please select a team.");
+      setError(
+        tr("teamRequired")
+      );
       return;
     }
 
     if (!form.otp) {
-      setError("Please enter the OTP.");
+      setError(tr("otpRequired"));
       return;
     }
 
     if (!/^\d{4}$/.test(form.otp)) {
-      setError(
-        "OTP must contain exactly 4 digits."
-      );
+      setError(tr("otpInvalid"));
       return;
     }
 
@@ -407,7 +657,6 @@ export default function CreateEmployee() {
           accessLevel:
             form.accessLevel,
 
-          // Keep legacy role compatible
           role: getLegacyRole(
             form.accessLevel
           ),
@@ -416,7 +665,7 @@ export default function CreateEmployee() {
 
       if (response.data?.success) {
         setMessage(
-          "Employee created successfully."
+          tr("employeeCreated")
         );
 
         setOtpSent(false);
@@ -428,7 +677,7 @@ export default function CreateEmployee() {
       } else {
         setError(
           response.data?.message ||
-            "Failed to create employee."
+            tr("failedCreate")
         );
       }
     } catch (err) {
@@ -439,7 +688,7 @@ export default function CreateEmployee() {
 
       setError(
         err.response?.data?.message ||
-          "Failed to create employee."
+          tr("failedCreate")
       );
     } finally {
       setCreating(false);
@@ -450,22 +699,10 @@ export default function CreateEmployee() {
   // LEGACY ROLE
   // ============================================================
 
-  const getLegacyRole = (
-    accessLevel
-  ) => {
+  const getLegacyRole = (accessLevel) => {
     if (
-      accessLevel === "superadmin"
-    ) {
-      return "admin";
-    }
-
-    if (
-      accessLevel === "admin"
-    ) {
-      return "admin";
-    }
-
-    if (
+      accessLevel === "superadmin" ||
+      accessLevel === "admin" ||
       accessLevel === "manager"
     ) {
       return "admin";
@@ -508,7 +745,11 @@ export default function CreateEmployee() {
   // ============================================================
 
   return (
-    <div className="create-employee-page">
+    <div
+      className={`create-employee-page ${
+        isDark ? "theme-dark" : "theme-light"
+      }`}
+    >
       <style>{`
         * {
           box-sizing: border-box;
@@ -516,9 +757,87 @@ export default function CreateEmployee() {
 
         .create-employee-page {
           min-height: 100vh;
-          background: #f6f8fc;
           padding: 28px;
-          color: #172033;
+          transition:
+            background 0.25s ease,
+            color 0.25s ease;
+        }
+
+        /* =====================================================
+           LIGHT THEME
+        ===================================================== */
+
+        .theme-light {
+          --page-bg: #f6f8fc;
+          --text-main: #172033;
+          --text-secondary: #687386;
+          --text-muted: #7a8495;
+          --text-label: #273247;
+          --border: #e3e8f0;
+          --border-soft: #edf0f5;
+          --input-border: #d9dfe9;
+          --surface: #ffffff;
+          --surface-soft: #fafbfc;
+          --input-bg: #ffffff;
+          --disabled-bg: #f3f5f8;
+          --disabled-text: #9aa2b0;
+          --placeholder: #a0a8b6;
+          --primary: #5865f2;
+          --primary-hover: #4754df;
+          --back-bg: #ffffff;
+          --back-hover: #f1f4f9;
+          --button-text: #ffffff;
+          --secondary-text: #344055;
+          --otp-bg: #f4f6ff;
+          --otp-text: #4e5bd5;
+          --success-bg: #eefaf3;
+          --success-border: #ccebd8;
+          --success-text: #207a45;
+          --error-bg: #fff2f3;
+          --error-border: #ffd7db;
+          --error-text: #b52e40;
+          --shadow: 0 8px 28px rgba(26, 42, 72, 0.05);
+        }
+
+        /* =====================================================
+           DARK THEME
+        ===================================================== */
+
+        .theme-dark {
+          --page-bg: #0d1117;
+          --text-main: #f1f5f9;
+          --text-secondary: #9aa7b8;
+          --text-muted: #8d99aa;
+          --text-label: #dce4ef;
+          --border: #252d3a;
+          --border-soft: #202733;
+          --input-border: #303948;
+          --surface: #151b24;
+          --surface-soft: #111720;
+          --input-bg: #10161f;
+          --disabled-bg: #1b222d;
+          --disabled-text: #697585;
+          --placeholder: #697585;
+          --primary: #6875f5;
+          --primary-hover: #5663e5;
+          --back-bg: #151b24;
+          --back-hover: #1d2530;
+          --button-text: #ffffff;
+          --secondary-text: #d8e0eb;
+          --otp-bg: #1a2040;
+          --otp-text: #aeb6ff;
+          --success-bg: #10291d;
+          --success-border: #1f5938;
+          --success-text: #75d99d;
+          --error-bg: #32171b;
+          --error-border: #6a2c34;
+          --error-text: #ff929f;
+          --shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .create-employee-page {
+          background: var(--page-bg);
+          color: var(--text-main);
         }
 
         .create-employee-container {
@@ -526,6 +845,10 @@ export default function CreateEmployee() {
           max-width: 1050px;
           margin: 0 auto;
         }
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
 
         .create-employee-header {
           display: flex;
@@ -540,18 +863,19 @@ export default function CreateEmployee() {
           font-size: 28px;
           font-weight: 750;
           letter-spacing: -0.5px;
+          color: var(--text-main);
         }
 
         .header-left p {
           margin: 0;
-          color: #687386;
+          color: var(--text-secondary);
           font-size: 14px;
         }
 
         .back-button {
-          border: 1px solid #dce2ec;
-          background: #ffffff;
-          color: #263248;
+          border: 1px solid var(--input-border);
+          background: var(--back-bg);
+          color: var(--secondary-text);
           height: 42px;
           padding: 0 16px;
           border-radius: 10px;
@@ -562,20 +886,24 @@ export default function CreateEmployee() {
         }
 
         .back-button:hover {
-          background: #f1f4f9;
+          background: var(--back-hover);
         }
 
+        /* =====================================================
+           FORM
+        ===================================================== */
+
         .employee-form {
-          background: #ffffff;
-          border: 1px solid #e3e8f0;
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 16px;
-          box-shadow: 0 8px 28px rgba(26, 42, 72, 0.05);
+          box-shadow: var(--shadow);
           overflow: hidden;
         }
 
         .form-section {
           padding: 25px;
-          border-bottom: 1px solid #edf0f5;
+          border-bottom: 1px solid var(--border-soft);
         }
 
         .form-section:last-child {
@@ -590,22 +918,25 @@ export default function CreateEmployee() {
           margin: 0 0 5px;
           font-size: 17px;
           font-weight: 750;
+          color: var(--text-main);
         }
 
         .section-heading p {
           margin: 0;
-          color: #7a8495;
+          color: var(--text-muted);
           font-size: 13px;
         }
 
         .form-grid {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns:
+            repeat(2, minmax(0, 1fr));
           gap: 18px;
         }
 
         .form-grid.three {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns:
+            repeat(3, minmax(0, 1fr));
         }
 
         .form-group {
@@ -619,13 +950,13 @@ export default function CreateEmployee() {
         .form-label {
           display: block;
           margin-bottom: 7px;
-          color: #273247;
+          color: var(--text-label);
           font-size: 13px;
           font-weight: 650;
         }
 
         .required {
-          color: #d33b4f;
+          color: #e45768;
         }
 
         .form-input,
@@ -633,38 +964,51 @@ export default function CreateEmployee() {
           width: 100%;
           height: 44px;
           padding: 0 13px;
-          border: 1px solid #d9dfe9;
+          border: 1px solid var(--input-border);
           border-radius: 9px;
           outline: none;
-          background: #ffffff;
-          color: #172033;
+          background: var(--input-bg);
+          color: var(--text-main);
           font-size: 14px;
-          transition: border 0.2s ease,
-            box-shadow 0.2s ease;
+          transition:
+            border 0.2s ease,
+            box-shadow 0.2s ease,
+            background 0.2s ease;
         }
 
         .form-input:focus,
         .form-select:focus {
-          border-color: #5865f2;
-          box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.1);
+          border-color: var(--primary);
+          box-shadow:
+            0 0 0 3px
+            rgba(104, 117, 245, 0.12);
         }
 
         .form-input::placeholder {
-          color: #a0a8b6;
+          color: var(--placeholder);
         }
 
         .form-select:disabled {
-          background: #f3f5f8;
-          color: #9aa2b0;
+          background: var(--disabled-bg);
+          color: var(--disabled-text);
           cursor: not-allowed;
+        }
+
+        .form-select option {
+          background: var(--input-bg);
+          color: var(--text-main);
         }
 
         .field-help {
           margin-top: 6px;
-          color: #8a93a2;
+          color: var(--text-muted);
           font-size: 12px;
           line-height: 1.4;
         }
+
+        /* =====================================================
+           OTP
+        ===================================================== */
 
         .otp-row {
           display: flex;
@@ -680,8 +1024,8 @@ export default function CreateEmployee() {
           padding: 0 18px;
           border: 0;
           border-radius: 9px;
-          background: #5865f2;
-          color: #ffffff;
+          background: var(--primary);
+          color: var(--button-text);
           cursor: pointer;
           white-space: nowrap;
           font-size: 13px;
@@ -690,7 +1034,7 @@ export default function CreateEmployee() {
         }
 
         .otp-button:hover {
-          background: #4754df;
+          background: var(--primary-hover);
         }
 
         .otp-button:disabled {
@@ -706,15 +1050,14 @@ export default function CreateEmployee() {
           margin-top: 9px;
           padding: 9px 11px;
           border-radius: 8px;
-          background: #f4f6ff;
-          color: #4e5bd5;
+          background: var(--otp-bg);
+          color: var(--otp-text);
           font-size: 12px;
         }
 
-        .otp-expired {
-          color: #c43c4f;
-          background: #fff4f5;
-        }
+        /* =====================================================
+           ALERTS
+        ===================================================== */
 
         .alert {
           margin: 0 25px 20px;
@@ -725,23 +1068,31 @@ export default function CreateEmployee() {
         }
 
         .alert-error {
-          background: #fff2f3;
-          border: 1px solid #ffd7db;
-          color: #b52e40;
+          background: var(--error-bg);
+          border: 1px solid var(--error-border);
+          color: var(--error-text);
         }
 
         .alert-success {
-          background: #eefaf3;
-          border: 1px solid #ccebd8;
-          color: #207a45;
+          background: var(--success-bg);
+          border: 1px solid var(--success-border);
+          color: var(--success-text);
         }
+
+        /* =====================================================
+           LOADING
+        ===================================================== */
 
         .loading-box {
           padding: 35px;
           text-align: center;
-          color: #707b8e;
+          color: var(--text-secondary);
           font-size: 14px;
         }
+
+        /* =====================================================
+           FOOTER
+        ===================================================== */
 
         .form-footer {
           display: flex;
@@ -749,8 +1100,8 @@ export default function CreateEmployee() {
           align-items: center;
           gap: 10px;
           padding: 20px 25px;
-          background: #fafbfc;
-          border-top: 1px solid #edf0f5;
+          background: var(--surface-soft);
+          border-top: 1px solid var(--border-soft);
         }
 
         .secondary-button,
@@ -765,23 +1116,23 @@ export default function CreateEmployee() {
         }
 
         .secondary-button {
-          border: 1px solid #d9dfe9;
-          background: #ffffff;
-          color: #344055;
+          border: 1px solid var(--input-border);
+          background: var(--back-bg);
+          color: var(--secondary-text);
         }
 
         .secondary-button:hover {
-          background: #f1f3f7;
+          background: var(--back-hover);
         }
 
         .primary-button {
           border: 0;
-          background: #5865f2;
-          color: #ffffff;
+          background: var(--primary);
+          color: var(--button-text);
         }
 
         .primary-button:hover {
-          background: #4754df;
+          background: var(--primary-hover);
         }
 
         .primary-button:disabled,
@@ -790,11 +1141,9 @@ export default function CreateEmployee() {
           cursor: not-allowed;
         }
 
-        .required-note {
-          margin-top: 15px;
-          color: #8a93a2;
-          font-size: 12px;
-        }
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
 
         @media (max-width: 800px) {
           .create-employee-page {
@@ -802,7 +1151,8 @@ export default function CreateEmployee() {
           }
 
           .form-grid.three {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns:
+              repeat(2, minmax(0, 1fr));
           }
         }
 
@@ -868,9 +1218,12 @@ export default function CreateEmployee() {
 
         <div className="create-employee-header">
           <div className="header-left">
-            <h1>Create Employee</h1>
+            <h1>
+              {tr("createEmployee")}
+            </h1>
+
             <p>
-              Add a new employee to the ANTIMATE organization.
+              {tr("createEmployeeDescription")}
             </p>
           </div>
 
@@ -881,7 +1234,7 @@ export default function CreateEmployee() {
               navigate("/workers")
             }
           >
-            ← Back to Employees
+            ← {tr("backToEmployees")}
           </button>
         </div>
 
@@ -900,17 +1253,24 @@ export default function CreateEmployee() {
 
           <section className="form-section">
             <div className="section-heading">
-              <h2>Personal Information</h2>
+              <h2>
+                {tr("personalInformation")}
+              </h2>
+
               <p>
-                Basic information about the employee.
+                {tr(
+                  "personalInformationDescription"
+                )}
               </p>
             </div>
 
             <div className="form-grid">
 
+              {/* FIRST NAME */}
+
               <div className="form-group">
                 <label className="form-label">
-                  First Name{" "}
+                  {tr("firstName")}{" "}
                   <span className="required">
                     *
                   </span>
@@ -922,14 +1282,18 @@ export default function CreateEmployee() {
                   name="firstName"
                   value={form.firstName}
                   onChange={handleChange}
-                  placeholder="Enter first name"
+                  placeholder={tr(
+                    "enterFirstName"
+                  )}
                   autoComplete="given-name"
                 />
               </div>
 
+              {/* SECOND NAME */}
+
               <div className="form-group">
                 <label className="form-label">
-                  Second Name{" "}
+                  {tr("secondName")}{" "}
                   <span className="required">
                     *
                   </span>
@@ -941,14 +1305,18 @@ export default function CreateEmployee() {
                   name="secondName"
                   value={form.secondName}
                   onChange={handleChange}
-                  placeholder="Enter second name"
+                  placeholder={tr(
+                    "enterSecondName"
+                  )}
                   autoComplete="family-name"
                 />
               </div>
 
+              {/* PHONE */}
+
               <div className="form-group">
                 <label className="form-label">
-                  Phone{" "}
+                  {tr("phone")}{" "}
                   <span className="required">
                     *
                   </span>
@@ -960,14 +1328,18 @@ export default function CreateEmployee() {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  placeholder="e.g. 0780000000"
+                  placeholder={tr(
+                    "phonePlaceholder"
+                  )}
                   autoComplete="tel"
                 />
               </div>
 
+              {/* EMAIL */}
+
               <div className="form-group">
                 <label className="form-label">
-                  Email{" "}
+                  {tr("email")}{" "}
                   <span className="required">
                     *
                   </span>
@@ -979,14 +1351,18 @@ export default function CreateEmployee() {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="employee@example.com"
+                  placeholder={tr(
+                    "emailPlaceholder"
+                  )}
                   autoComplete="email"
                 />
               </div>
 
+              {/* PASSWORD */}
+
               <div className="form-group full">
                 <label className="form-label">
-                  Password{" "}
+                  {tr("password")}{" "}
                   <span className="required">
                     *
                   </span>
@@ -998,12 +1374,14 @@ export default function CreateEmployee() {
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Minimum 6 characters"
+                  placeholder={tr(
+                    "minimumPassword"
+                  )}
                   autoComplete="new-password"
                 />
 
                 <div className="field-help">
-                  The employee will use this password when signing in.
+                  {tr("passwordHelp")}
                 </div>
               </div>
             </div>
@@ -1015,15 +1393,22 @@ export default function CreateEmployee() {
 
           <section className="form-section">
             <div className="section-heading">
-              <h2>Organization</h2>
+              <h2>
+                {tr("organization")}
+              </h2>
+
               <p>
-                Define where the employee belongs within ANTIMATE.
+                {tr(
+                  "organizationDescription"
+                )}
               </p>
             </div>
 
             {loadingData ? (
               <div className="loading-box">
-                Loading organization structure...
+                {tr(
+                  "loadingOrganization"
+                )}
               </div>
             ) : (
               <div className="form-grid three">
@@ -1032,7 +1417,7 @@ export default function CreateEmployee() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Department{" "}
+                    {tr("department")}{" "}
                     <span className="required">
                       *
                     </span>
@@ -1045,22 +1430,31 @@ export default function CreateEmployee() {
                     onChange={handleChange}
                   >
                     <option value="">
-                      Select department
+                      {tr(
+                        "selectDepartment"
+                      )}
                     </option>
 
                     {departments
                       .filter(
                         (department) =>
-                          department.active !== false
+                          department.active !==
+                          false
                       )
-                      .map((department) => (
-                        <option
-                          key={department._id}
-                          value={department._id}
-                        >
-                          {department.name}
-                        </option>
-                      ))}
+                      .map(
+                        (department) => (
+                          <option
+                            key={
+                              department._id
+                            }
+                            value={
+                              department._id
+                            }
+                          >
+                            {department.name}
+                          </option>
+                        )
+                      )}
                   </select>
                 </div>
 
@@ -1068,7 +1462,7 @@ export default function CreateEmployee() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Position{" "}
+                    {tr("position")}{" "}
                     <span className="required">
                       *
                     </span>
@@ -1085,25 +1479,39 @@ export default function CreateEmployee() {
                   >
                     <option value="">
                       {!form.department
-                        ? "Select department first"
-                        : filteredPositions.length === 0
-                        ? "No positions available"
-                        : "Select position"}
+                        ? tr(
+                            "selectDepartmentFirst"
+                          )
+                        : filteredPositions.length ===
+                          0
+                        ? tr(
+                            "noPositions"
+                          )
+                        : tr(
+                            "selectPosition"
+                          )}
                     </option>
 
                     {filteredPositions
                       .filter(
                         (position) =>
-                          position.active !== false
+                          position.active !==
+                          false
                       )
-                      .map((position) => (
-                        <option
-                          key={position._id}
-                          value={position._id}
-                        >
-                          {position.name}
-                        </option>
-                      ))}
+                      .map(
+                        (position) => (
+                          <option
+                            key={
+                              position._id
+                            }
+                            value={
+                              position._id
+                            }
+                          >
+                            {position.name}
+                          </option>
+                        )
+                      )}
                   </select>
                 </div>
 
@@ -1111,7 +1519,7 @@ export default function CreateEmployee() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Team{" "}
+                    {tr("team")}{" "}
                     <span className="required">
                       *
                     </span>
@@ -1128,16 +1536,22 @@ export default function CreateEmployee() {
                   >
                     <option value="">
                       {!form.department
-                        ? "Select department first"
-                        : filteredTeams.length === 0
-                        ? "No teams available"
-                        : "Select team"}
+                        ? tr(
+                            "selectDepartmentFirst"
+                          )
+                        : filteredTeams.length ===
+                          0
+                        ? tr("noTeams")
+                        : tr(
+                            "selectTeam"
+                          )}
                     </option>
 
                     {filteredTeams
                       .filter(
                         (team) =>
-                          team.active !== false
+                          team.active !==
+                          false
                       )
                       .map((team) => (
                         <option
@@ -1154,7 +1568,7 @@ export default function CreateEmployee() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Manager
+                    {tr("manager")}
                   </label>
 
                   <select
@@ -1164,7 +1578,7 @@ export default function CreateEmployee() {
                     onChange={handleChange}
                   >
                     <option value="">
-                      No manager
+                      {tr("noManager")}
                     </option>
 
                     {managers.map(
@@ -1185,7 +1599,9 @@ export default function CreateEmployee() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Employment Type
+                    {tr(
+                      "employmentType"
+                    )}
                   </label>
 
                   <select
@@ -1197,27 +1613,27 @@ export default function CreateEmployee() {
                     onChange={handleChange}
                   >
                     <option value="full_time">
-                      Full Time
+                      {tr("fullTime")}
                     </option>
 
                     <option value="part_time">
-                      Part Time
+                      {tr("partTime")}
                     </option>
 
                     <option value="contract">
-                      Contract
+                      {tr("contract")}
                     </option>
 
                     <option value="intern">
-                      Intern
+                      {tr("intern")}
                     </option>
 
                     <option value="volunteer">
-                      Volunteer
+                      {tr("volunteer")}
                     </option>
 
                     <option value="temporary">
-                      Temporary
+                      {tr("temporary")}
                     </option>
                   </select>
                 </div>
@@ -1226,7 +1642,7 @@ export default function CreateEmployee() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Access Level
+                    {tr("accessLevel")}
                   </label>
 
                   <select
@@ -1238,28 +1654,30 @@ export default function CreateEmployee() {
                     onChange={handleChange}
                   >
                     <option value="staff">
-                      Staff
+                      {tr("staff")}
                     </option>
 
                     <option value="limited">
-                      Limited
+                      {tr("limited")}
                     </option>
 
                     <option value="manager">
-                      Manager
+                      {tr("managerLevel")}
                     </option>
 
                     <option value="admin">
-                      Admin
+                      {tr("adminLevel")}
                     </option>
 
                     <option value="superadmin">
-                      Superadmin
+                      {tr("superadmin")}
                     </option>
                   </select>
 
                   <div className="field-help">
-                    Controls the employee's system access level.
+                    {tr(
+                      "accessLevelHelp"
+                    )}
                   </div>
                 </div>
               </div>
@@ -1272,15 +1690,22 @@ export default function CreateEmployee() {
 
           <section className="form-section">
             <div className="section-heading">
-              <h2>Phone Verification</h2>
+              <h2>
+                {tr(
+                  "phoneVerification"
+                )}
+              </h2>
+
               <p>
-                Verify the employee's phone before creating the account.
+                {tr(
+                  "phoneVerificationDescription"
+                )}
               </p>
             </div>
 
             <div className="form-group">
               <label className="form-label">
-                Verification OTP{" "}
+                {tr("verificationOTP")}{" "}
                 <span className="required">
                   *
                 </span>
@@ -1306,7 +1731,9 @@ export default function CreateEmployee() {
                     setError("");
                     setMessage("");
                   }}
-                  placeholder="Enter 4-digit OTP"
+                  placeholder={tr(
+                    "enterOTP"
+                  )}
                   inputMode="numeric"
                   maxLength={4}
                 />
@@ -1325,10 +1752,10 @@ export default function CreateEmployee() {
                   }
                 >
                   {sendingOTP
-                    ? "Sending..."
+                    ? tr("sending")
                     : otpSent
-                    ? "Resend OTP"
-                    : "Send OTP"}
+                    ? tr("resendOTP")
+                    : tr("sendOTP")}
                 </button>
               </div>
 
@@ -1336,7 +1763,7 @@ export default function CreateEmployee() {
                 otpExpiresIn > 0 && (
                   <div className="otp-status">
                     <span>
-                      OTP has been sent successfully.
+                      {tr("otpSent")}
                     </span>
 
                     <strong>
@@ -1349,7 +1776,9 @@ export default function CreateEmployee() {
                 form.phone &&
                 form.email && (
                   <div className="field-help">
-                    Click "Send OTP" to send a verification code through the ANTIMATE Gateway.
+                    {tr(
+                      "otpGatewayHelp"
+                    )}
                   </div>
                 )}
             </div>
@@ -1383,7 +1812,7 @@ export default function CreateEmployee() {
               onClick={resetForm}
               disabled={creating}
             >
-              Clear
+              {tr("clear")}
             </button>
 
             <button
@@ -1395,8 +1824,12 @@ export default function CreateEmployee() {
               }
             >
               {creating
-                ? "Creating Employee..."
-                : "Create Employee"}
+                ? tr(
+                    "creatingEmployee"
+                  )
+                : tr(
+                    "createEmployeeButton"
+                  )}
             </button>
 
           </div>
