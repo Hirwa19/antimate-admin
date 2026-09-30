@@ -2,159 +2,323 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect
+  useEffect,
+  useCallback,
 } from "react";
-
 
 const AuthContext = createContext();
 
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://brooder-backend.onrender.com/api";
 
+export function AuthProvider({ children }) {
+  const [admin, setAdmin] = useState(null);
+  const [token, setToken] = useState(null);
+  const [permissions, setPermissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
 
-export function AuthProvider({children}){
+  /*
+  ============================================================
+  LOAD SAVED LOGIN
+  ============================================================
+  */
 
+  useEffect(() => {
+    const savedAdmin = localStorage.getItem("admin");
+    const savedToken = localStorage.getItem("token");
+    const savedPermissions =
+      localStorage.getItem("permissions");
 
-const [admin,setAdmin] = useState(null);
+    if (savedAdmin && savedToken) {
+      try {
+        const parsedAdmin = JSON.parse(savedAdmin);
 
-const [token,setToken] = useState(null);
+        setAdmin(parsedAdmin);
+        setToken(savedToken);
 
-const [loading,setLoading] = useState(true);
+        if (savedPermissions) {
+          try {
+            setPermissions(JSON.parse(savedPermissions));
+          } catch {
+            setPermissions([]);
+          }
+        }
+      } catch (error) {
+        console.error("FAILED TO LOAD SAVED ADMIN:", error);
 
+        localStorage.removeItem("admin");
+        localStorage.removeItem("token");
+        localStorage.removeItem("permissions");
+      }
+    }
 
+    setLoading(false);
+  }, []);
 
+  /*
+  ============================================================
+  LOAD CURRENT ACCESS
+  ============================================================
+  */
 
-// LOAD SAVED LOGIN
+  const loadPermissions = useCallback(
+    async (jwtToken) => {
+      if (!jwtToken) {
+        setPermissions([]);
+        return;
+      }
 
-useEffect(()=>{
+      setPermissionsLoading(true);
 
+      try {
+        const response = await fetch(
+          `${API_URL}/access-control/me`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${jwtToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-const savedAdmin =
-localStorage.getItem("admin");
+        const data = await response.json();
 
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              "Failed to load access permissions"
+          );
+        }
 
-const savedToken =
-localStorage.getItem("token");
+        const user = data?.user;
+        const access = data?.access;
 
+        const loadedPermissions =
+          Array.isArray(access?.permissions)
+            ? access.permissions
+            : [];
 
+        /*
+        Update admin with the latest backend data.
+        */
 
-if(savedAdmin && savedToken){
+        if (user) {
+          setAdmin(user);
 
-setAdmin(
-JSON.parse(savedAdmin)
-);
+          localStorage.setItem(
+            "admin",
+            JSON.stringify(user)
+          );
+        }
 
-setToken(savedToken);
+        setPermissions(loadedPermissions);
 
+        localStorage.setItem(
+          "permissions",
+          JSON.stringify(loadedPermissions)
+        );
+      } catch (error) {
+        console.error(
+          "LOAD ACCESS PERMISSIONS ERROR:",
+          error
+        );
+
+        /*
+        Do not immediately logout here.
+
+        If Render/backend is temporarily waking up,
+        the saved login can remain available.
+        */
+
+        setPermissions([]);
+      } finally {
+        setPermissionsLoading(false);
+      }
+    },
+    []
+  );
+
+  /*
+  ============================================================
+  LOAD PERMISSIONS AFTER LOGIN IS RESTORED
+  ============================================================
+  */
+
+  useEffect(() => {
+    if (token) {
+      loadPermissions(token);
+    }
+  }, [token, loadPermissions]);
+
+  /*
+  ============================================================
+  LOGIN
+  ============================================================
+  */
+
+  const login = (adminData, jwtToken) => {
+    console.log(
+      "AUTH LOGIN DATA:",
+      adminData
+    );
+
+    localStorage.setItem(
+      "admin",
+      JSON.stringify(adminData)
+    );
+
+    localStorage.setItem(
+      "token",
+      jwtToken
+    );
+
+    localStorage.removeItem("permissions");
+
+    setAdmin(adminData);
+    setToken(jwtToken);
+    setPermissions([]);
+
+    /*
+    Load permissions immediately after login.
+    */
+
+    loadPermissions(jwtToken);
+  };
+
+  /*
+  ============================================================
+  LOGOUT
+  ============================================================
+  */
+
+  const logout = () => {
+    localStorage.removeItem("admin");
+    localStorage.removeItem("token");
+    localStorage.removeItem("permissions");
+
+    setAdmin(null);
+    setToken(null);
+    setPermissions([]);
+  };
+
+  /*
+  ============================================================
+  HAS PERMISSION
+  ============================================================
+  */
+
+  const hasPermission = useCallback(
+    (permission) => {
+      if (!permission) {
+        return false;
+      }
+
+      /*
+      Superadmin / wildcard permission.
+      */
+
+      if (permissions.includes("*")) {
+        return true;
+      }
+
+      return permissions.includes(permission);
+    },
+    [permissions]
+  );
+
+  /*
+  ============================================================
+  HAS ANY PERMISSION
+  ============================================================
+  */
+
+  const hasAnyPermission = useCallback(
+    (...requiredPermissions) => {
+      if (!requiredPermissions.length) {
+        return false;
+      }
+
+      if (permissions.includes("*")) {
+        return true;
+      }
+
+      return requiredPermissions.some(
+        (permission) =>
+          permissions.includes(permission)
+      );
+    },
+    [permissions]
+  );
+
+  /*
+  ============================================================
+  HAS ALL PERMISSIONS
+  ============================================================
+  */
+
+  const hasAllPermissions = useCallback(
+    (...requiredPermissions) => {
+      if (!requiredPermissions.length) {
+        return false;
+      }
+
+      if (permissions.includes("*")) {
+        return true;
+      }
+
+      return requiredPermissions.every(
+        (permission) =>
+          permissions.includes(permission)
+      );
+    },
+    [permissions]
+  );
+
+  /*
+  ============================================================
+  ACCESS LEVEL
+  ============================================================
+  */
+
+  const accessLevel =
+    admin?.accessLevel || "limited";
+
+  /*
+  ============================================================
+  CONTEXT
+  ============================================================
+  */
+
+  return (
+    <AuthContext.Provider
+      value={{
+        admin,
+        token,
+
+        accessLevel,
+        permissions,
+
+        login,
+        logout,
+
+        hasPermission,
+        hasAnyPermission,
+        hasAllPermissions,
+
+        loadPermissions,
+
+        loading,
+        permissionsLoading,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-
-
-setLoading(false);
-
-
-
-},[]);
-
-
-
-
-
-
-
-// LOGIN
-
-const login = (adminData, jwtToken)=>{
-
-
-console.log(
-"AUTH LOGIN DATA:",
-adminData
-);
-
-
-localStorage.setItem(
-"admin",
-JSON.stringify(adminData)
-);
-
-
-localStorage.setItem(
-"token",
-jwtToken
-);
-
-
-
-setAdmin(adminData);
-
-setToken(jwtToken);
-
-
-};
-
-
-
-
-
-
-// LOGOUT
-
-const logout = ()=>{
-
-
-localStorage.removeItem("admin");
-
-localStorage.removeItem("token");
-
-
-setAdmin(null);
-
-setToken(null);
-
-
-};
-
-
-
-
-
-
-
-return (
-
-<AuthContext.Provider
-
-value={{
-
-admin,
-
-token,
-
-login,
-
-logout,
-
-loading
-
-}}
-
->
-
-{children}
-
-</AuthContext.Provider>
-
-
-);
-
-
-}
-
-
-
-
-
-export function useAuth(){
-
-return useContext(AuthContext);
-
+export function useAuth() {
+  return useContext(AuthContext);
 }

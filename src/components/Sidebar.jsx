@@ -7,80 +7,105 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  Radio,
 } from "lucide-react";
-
-import {
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useAppSettings } from "../context/AppSettingsContext";
 
-/*
-|--------------------------------------------------------------------------
-| ANTIMATE ADMIN — SIDEBAR
-|--------------------------------------------------------------------------
-*/
-
 export default function Sidebar() {
-  const { logout, admin } = useAuth();
-
   const navigate = useNavigate();
   const location = useLocation();
 
   const {
-    t,
-  } = useAppSettings();
+    admin,
+    logout,
+    hasPermission,
+  } = useAuth();
+
+  const { t } = useAppSettings();
 
   /*
-  |--------------------------------------------------------------------------
-  | MENU
-  |--------------------------------------------------------------------------
+  ============================================================
+  MENU
+  ============================================================
   */
 
-  const menu = [
+  const menuItems = [
     {
-      title: t("dashboard"),
-      icon: <LayoutDashboard size={19} />,
+      label: t("dashboard") || "Dashboard",
       path: "/dashboard",
+      icon: LayoutDashboard,
+      permission: "dashboard.view",
     },
 
     {
-      title: t("devices"),
-      icon: <Cpu size={19} />,
+      label: t("devices") || "Devices",
       path: "/devices",
+      icon: Cpu,
+      permission: "devices.view",
     },
 
     {
-      title: t("generateDevice"),
-      icon: <Cpu size={19} />,
+      label:
+        t("generateDevice") || "Generate Device",
       path: "/generate-device",
+      icon: Cpu,
+      permission: "devices.create",
     },
 
     {
-      title: t("generateGateway"),
-      icon: <Shield size={19} />,
+      label:
+        t("generateGateway") || "Generate Gateway",
       path: "/generate-gateway",
+      icon: Radio,
+      permission: "gateways.create",
     },
 
     {
-      title: t("workers"),
-      icon: <Users size={19} />,
+      label: t("workers") || "Workers",
       path: "/workers",
+      icon: Users,
+      permission: "workers.view",
     },
 
     {
-      title: t("settings"),
-      icon: <Settings size={19} />,
+      label:
+        t("accessControl") || "Access Control",
+      path: "/access-control",
+      icon: Shield,
+      permission: "access_control.view",
+    },
+
+    {
+      label: t("settings") || "Settings",
       path: "/settings",
+      icon: Settings,
+      permission: "settings.view",
     },
   ];
 
   /*
-  |--------------------------------------------------------------------------
-  | ACTIVE
-  |--------------------------------------------------------------------------
+  ============================================================
+  FILTER MENU BY REAL BACKEND PERMISSIONS
+  ============================================================
+  */
+
+  const visibleMenuItems = menuItems.filter(
+    (item) => {
+      if (!item.permission) {
+        return true;
+      }
+
+      return hasPermission(item.permission);
+    }
+  );
+
+  /*
+  ============================================================
+  ACTIVE PATH
+  ============================================================
   */
 
   const isActive = (path) => {
@@ -90,571 +115,421 @@ export default function Sidebar() {
 
     return (
       location.pathname === path ||
-      location.pathname.startsWith(
-        `${path}/`
-      )
+      location.pathname.startsWith(`${path}/`)
     );
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | NAVIGATION
-  |--------------------------------------------------------------------------
+  ============================================================
+  NAVIGATION
+  ============================================================
   */
 
   const goTo = (path) => {
     navigate(path);
 
-    /*
-     * Close mobile sidebar after navigation.
-     */
-
-    const app =
-      document.querySelector(
-        ".antimate-app"
-      );
-
-    app?.classList.remove(
+    document.body.classList.remove(
       "sidebar-open"
     );
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | LOGOUT
-  |--------------------------------------------------------------------------
+  ============================================================
+  LOGOUT
+  ============================================================
   */
 
-  const logoutUser = () => {
+  const handleLogout = () => {
     logout();
-
-    navigate("/login", {
-      replace: true,
-    });
+    navigate("/login", { replace: true });
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | ADMIN
-  |--------------------------------------------------------------------------
+  ============================================================
+  ADMIN NAME
+  ============================================================
   */
 
   const adminName =
-    admin?.name ||
     admin?.fullName ||
+    `${admin?.firstName || ""} ${
+      admin?.secondName || ""
+    }`.trim() ||
+    admin?.name ||
     admin?.username ||
-    t("admin");
-
-  const adminRole =
-    admin?.role ||
-    t("administrator");
-
-  const initial =
-    adminName
-      .charAt(0)
-      .toUpperCase();
+    t("admin") ||
+    "Administrator";
 
   /*
-  |--------------------------------------------------------------------------
-  | RENDER
-  |--------------------------------------------------------------------------
+  ============================================================
+  ACCESS LEVEL
+  ============================================================
+  */
+
+  const accessLevel =
+    admin?.accessLevel || "limited";
+
+  const accessLabels = {
+    superadmin: "Super Administrator",
+    admin: "Administrator",
+    manager: "Manager",
+    staff: "Staff",
+    limited: "Limited",
+  };
+
+  const accessLabel =
+    accessLabels[accessLevel] ||
+    accessLevel;
+
+  /*
+  ============================================================
+  UI
+  ============================================================
   */
 
   return (
-    <div className="antimate-sidebar">
+    <aside className="antimate-sidebar">
+      <div className="antimate-sidebar-inner">
 
-      {/* ============================================================
-          BRAND
-          ============================================================ */}
+        {/* BRAND */}
 
-      <div className="antimate-sidebar-brand">
-
-        <button
-          type="button"
-          className="antimate-brand"
-          onClick={() =>
-            goTo("/dashboard")
-          }
-        >
-
-          <span className="antimate-brand-mark">
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-mark">
             A
-          </span>
+          </div>
 
-          <span className="antimate-brand-copy">
-
-            <span className="antimate-brand-name">
-              ANTIMATE
-            </span>
-
-            <span className="antimate-brand-subtitle">
-              {t("administration")}
-            </span>
-
-          </span>
-
-        </button>
-
-      </div>
-
-      {/* ============================================================
-          NAVIGATION
-          ============================================================ */}
-
-      <nav className="antimate-sidebar-nav">
-
-        <div className="antimate-nav-heading">
-          {t("administration")}
+          <div className="sidebar-brand-text">
+            <strong>ANTIMATE</strong>
+            <span>ADMIN</span>
+          </div>
         </div>
 
-        <div className="antimate-nav-items">
+        {/* USER */}
 
-          {menu.map((item) => {
-            const active =
-              isActive(item.path);
+        <div className="sidebar-user">
+          <div className="sidebar-user-avatar">
+            {adminName
+              .charAt(0)
+              .toUpperCase()}
+          </div>
+
+          <div className="sidebar-user-info">
+            <strong>{adminName}</strong>
+
+            <span>{accessLabel}</span>
+          </div>
+        </div>
+
+        {/* NAVIGATION */}
+
+        <nav className="sidebar-navigation">
+          <div className="sidebar-section-title">
+            {t("administration") ||
+              "Administration"}
+          </div>
+
+          {visibleMenuItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
 
             return (
               <button
                 key={item.path}
                 type="button"
+                className={`sidebar-nav-item ${
+                  active
+                    ? "sidebar-nav-item-active"
+                    : ""
+                }`}
                 onClick={() =>
                   goTo(item.path)
                 }
-                className={
-                  active
-                    ? "antimate-nav-item active"
-                    : "antimate-nav-item"
-                }
               >
+                <Icon
+                  size={19}
+                  strokeWidth={2}
+                />
 
-                <span className="antimate-nav-icon">
-                  {item.icon}
-                </span>
+                <span>{item.label}</span>
 
-                <span className="antimate-nav-title">
-                  {item.title}
-                </span>
-
-                {active && (
-                  <ChevronRight
-                    size={15}
-                    className="antimate-nav-arrow"
-                  />
-                )}
-
+                <ChevronRight
+                  size={16}
+                  className="sidebar-nav-arrow"
+                />
               </button>
             );
           })}
+        </nav>
 
-        </div>
+        {/* FOOTER */}
 
-      </nav>
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="sidebar-logout"
+            onClick={handleLogout}
+          >
+            <LogOut
+              size={19}
+              strokeWidth={2}
+            />
 
-      {/* ============================================================
-          ACCOUNT
-          ============================================================ */}
-
-      <div className="antimate-sidebar-footer">
-
-        <div className="antimate-sidebar-user">
-
-          <div className="antimate-sidebar-avatar">
-            {initial}
-          </div>
-
-          <div className="antimate-sidebar-user-info">
-
-            <span className="antimate-sidebar-user-name">
-              {adminName}
+            <span>
+              {t("logout") || "Logout"}
             </span>
-
-            <span className="antimate-sidebar-user-role">
-              {adminRole}
-            </span>
-
-          </div>
-
+          </button>
         </div>
-
-        <button
-          type="button"
-          className="antimate-logout"
-          onClick={logoutUser}
-        >
-
-          <LogOut size={18} />
-
-          <span>
-            {t("logout")}
-          </span>
-
-        </button>
-
       </div>
 
-      {/* ============================================================
-          CSS
-          ============================================================ */}
-
       <style>{`
-
         .antimate-sidebar {
+          --sidebar-bg: #ffffff;
+          --sidebar-border: #e7e9f2;
+          --sidebar-text: #1f2430;
+          --sidebar-muted: #73798a;
+          --sidebar-hover: #f4f5fb;
+          --sidebar-active: #eef0ff;
+          --sidebar-primary: #5961d9;
+
+          width: 260px;
+          min-width: 260px;
+          height: 100vh;
+
+          background: var(--sidebar-bg);
+          border-right: 1px solid var(--sidebar-border);
+
+          position: fixed;
+          left: 0;
+          top: 0;
+          bottom: 0;
+
+          z-index: 1000;
+        }
+
+        .antimate-sidebar-inner {
+          height: 100%;
           display: flex;
           flex-direction: column;
 
-          width: 100%;
-          min-height: 100%;
-
-          background:
-            var(--admin-surface);
-
-          color:
-            var(--admin-text);
+          padding: 20px 14px;
+          box-sizing: border-box;
         }
 
-        /* ============================================================
-           BRAND
-           ============================================================ */
-
-        .antimate-sidebar-brand {
-          height:
-            var(--admin-navbar-height);
-
+        .sidebar-brand {
           display: flex;
           align-items: center;
+          gap: 11px;
 
-          padding:
-            0 19px;
-
-          border-bottom:
-            1px solid var(--admin-border);
+          padding: 4px 8px 20px;
         }
 
-        .antimate-brand {
-          display: flex;
-          align-items: center;
+        .sidebar-brand-mark {
+          width: 38px;
+          height: 38px;
 
-          width: 100%;
+          border-radius: 11px;
 
-          padding: 0;
-
-          background: transparent;
-
-          color: inherit;
-
-          cursor: pointer;
-
-          text-align: left;
-        }
-
-        .antimate-brand-mark {
           display: flex;
           align-items: center;
           justify-content: center;
 
-          width: 34px;
-          height: 34px;
-
-          flex-shrink: 0;
-
-          border-radius: 9px;
-
-          background:
-            var(--admin-primary);
-
-          color:
-            #020617;
-
-          font-size: 17px;
-          font-weight: 850;
-        }
-
-        .antimate-brand-copy {
-          display: flex;
-          flex-direction: column;
-
-          margin-left: 10px;
-        }
-
-        .antimate-brand-name {
-          font-size: 16px;
+          font-size: 19px;
           font-weight: 800;
 
-          letter-spacing: .03em;
+          color: #ffffff;
+
+          background: linear-gradient(
+            135deg,
+            #5961d9,
+            #7448d8
+          );
         }
 
-        .antimate-brand-subtitle {
-          margin-top: 2px;
-
-          font-size: 9px;
-          font-weight: 600;
-
-          text-transform: uppercase;
-
-          letter-spacing: .07em;
-
-          color:
-            var(--admin-text-muted);
-        }
-
-        /* ============================================================
-           NAV
-           ============================================================ */
-
-        .antimate-sidebar-nav {
-          flex: 1;
-
-          padding:
-            21px 12px;
-        }
-
-        .antimate-nav-heading {
-          padding:
-            0 10px 9px;
-
-          font-size: 10px;
-          font-weight: 750;
-
-          text-transform: uppercase;
-
-          letter-spacing: .08em;
-
-          color:
-            var(--admin-text-muted);
-        }
-
-        .antimate-nav-items {
+        .sidebar-brand-text {
           display: flex;
           flex-direction: column;
-
-          gap: 3px;
+          line-height: 1.05;
         }
 
-        .antimate-nav-item {
+        .sidebar-brand-text strong {
+          font-size: 16px;
+          letter-spacing: 0.3px;
+          color: var(--sidebar-text);
+        }
+
+        .sidebar-brand-text span {
+          margin-top: 4px;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 1.6px;
+          color: var(--sidebar-muted);
+        }
+
+        .sidebar-user {
           display: flex;
           align-items: center;
+          gap: 10px;
 
-          width: 100%;
-          min-height: 44px;
+          padding: 12px 9px;
+          margin-bottom: 18px;
 
-          padding:
-            0 10px;
-
-          border:
-            1px solid transparent;
-
-          border-radius: 8px;
-
-          background: transparent;
-
-          color:
-            var(--admin-text-secondary);
-
-          cursor: pointer;
-
-          text-align: left;
-
-          transition:
-            background 150ms ease,
-            border-color 150ms ease,
-            color 150ms ease;
+          border: 1px solid var(--sidebar-border);
+          border-radius: 12px;
         }
 
-        .antimate-nav-item:hover {
-          background:
-            rgba(148,163,184,.06);
-
-          color:
-            var(--admin-text);
-        }
-
-        .antimate-nav-item.active {
-          background:
-            rgba(56,189,248,.10);
-
-          border-color:
-            rgba(56,189,248,.17);
-
-          color:
-            var(--admin-primary);
-        }
-
-        .antimate-nav-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          width: 28px;
-          height: 28px;
-
-          flex-shrink: 0;
-        }
-
-        .antimate-nav-title {
-          margin-left: 9px;
-
-          min-width: 0;
-
-          overflow: hidden;
-
-          text-overflow: ellipsis;
-
-          white-space: nowrap;
-
-          font-size: 13px;
-          font-weight: 550;
-        }
-
-        .antimate-nav-arrow {
-          margin-left: auto;
-
-          flex-shrink: 0;
-        }
-
-        /* ============================================================
-           FOOTER
-           ============================================================ */
-
-        .antimate-sidebar-footer {
-          padding:
-            13px 12px 16px;
-
-          border-top:
-            1px solid var(--admin-border);
-        }
-
-        .antimate-sidebar-user {
-          display: flex;
-          align-items: center;
-
-          padding:
-            6px 8px 12px;
-        }
-
-        .antimate-sidebar-avatar {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          width: 34px;
-          height: 34px;
-
-          flex-shrink: 0;
+        .sidebar-user-avatar {
+          width: 36px;
+          height: 36px;
+          min-width: 36px;
 
           border-radius: 50%;
 
-          background:
-            var(--admin-surface-3);
-
-          border:
-            1px solid var(--admin-border-strong);
-
-          font-size: 12px;
-          font-weight: 750;
-        }
-
-        .antimate-sidebar-user-info {
-          display: flex;
-          flex-direction: column;
-
-          min-width: 0;
-
-          margin-left: 9px;
-        }
-
-        .antimate-sidebar-user-name {
-          overflow: hidden;
-
-          text-overflow: ellipsis;
-
-          white-space: nowrap;
-
-          font-size: 12px;
-          font-weight: 650;
-        }
-
-        .antimate-sidebar-user-role {
-          margin-top: 2px;
-
-          overflow: hidden;
-
-          text-overflow: ellipsis;
-
-          white-space: nowrap;
-
-          font-size: 10px;
-
-          color:
-            var(--admin-text-muted);
-        }
-
-        /* ============================================================
-           LOGOUT
-           ============================================================ */
-
-        .antimate-logout {
           display: flex;
           align-items: center;
+          justify-content: center;
 
-          gap: 9px;
+          background: var(--sidebar-active);
+          color: var(--sidebar-primary);
 
+          font-weight: 800;
+          font-size: 14px;
+        }
+
+        .sidebar-user-info {
+          min-width: 0;
+
+          display: flex;
+          flex-direction: column;
+        }
+
+        .sidebar-user-info strong {
+          color: var(--sidebar-text);
+          font-size: 13px;
+
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .sidebar-user-info span {
+          margin-top: 3px;
+
+          color: var(--sidebar-muted);
+          font-size: 11px;
+          text-transform: capitalize;
+        }
+
+        .sidebar-navigation {
+          flex: 1;
+          overflow-y: auto;
+        }
+
+        .sidebar-section-title {
+          padding: 0 10px 8px;
+
+          color: var(--sidebar-muted);
+
+          font-size: 10px;
+          font-weight: 700;
+
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+
+        .sidebar-nav-item {
           width: 100%;
-          min-height: 40px;
-
-          padding:
-            0 10px;
-
-          border:
-            1px solid transparent;
-
-          border-radius: 8px;
-
+          border: 0;
           background: transparent;
 
-          color:
-            var(--admin-text-muted);
+          color: var(--sidebar-muted);
+
+          display: flex;
+          align-items: center;
+          gap: 11px;
+
+          padding: 11px 12px;
+          margin-bottom: 4px;
+
+          border-radius: 10px;
 
           cursor: pointer;
 
+          font-family: inherit;
           font-size: 13px;
-          font-weight: 550;
+          font-weight: 600;
 
           text-align: left;
 
           transition:
-            background 150ms ease,
-            color 150ms ease,
-            border-color 150ms ease;
+            background 0.18s ease,
+            color 0.18s ease;
         }
 
-        .antimate-logout:hover {
-          background:
-            rgba(239,68,68,.08);
-
-          border-color:
-            rgba(239,68,68,.14);
-
-          color:
-            var(--admin-danger);
+        .sidebar-nav-item:hover {
+          background: var(--sidebar-hover);
+          color: var(--sidebar-text);
         }
 
-        /* ============================================================
-           LIGHT
-           ============================================================ */
-
-        [data-theme="light"]
-        .antimate-nav-item:hover {
-          background:
-            rgba(15,23,42,.045);
+        .sidebar-nav-item-active {
+          background: var(--sidebar-active);
+          color: var(--sidebar-primary);
         }
 
-        [data-theme="light"]
-        .antimate-nav-item.active {
-          background:
-            rgba(14,165,233,.08);
+        .sidebar-nav-arrow {
+          margin-left: auto;
+          opacity: 0.45;
         }
 
+        .sidebar-footer {
+          padding-top: 14px;
+          border-top: 1px solid var(--sidebar-border);
+        }
+
+        .sidebar-logout {
+          width: 100%;
+
+          border: 0;
+          background: transparent;
+
+          color: var(--sidebar-muted);
+
+          display: flex;
+          align-items: center;
+          gap: 11px;
+
+          padding: 11px 12px;
+
+          border-radius: 10px;
+
+          cursor: pointer;
+
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 600;
+
+          text-align: left;
+
+          transition:
+            background 0.18s ease,
+            color 0.18s ease;
+        }
+
+        .sidebar-logout:hover {
+          background: var(--sidebar-hover);
+          color: var(--sidebar-text);
+        }
+
+        @media (max-width: 900px) {
+          .antimate-sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+          }
+
+          body.sidebar-open .antimate-sidebar {
+            transform: translateX(0);
+          }
+        }
       `}</style>
-    </div>
+    </aside>
   );
 }

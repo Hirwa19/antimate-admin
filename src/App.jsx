@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppSettingsProvider } from "./context/AppSettingsContext";
 
 import Login from "./pages/Login";
+import AccessControl from "./pages/AccessControl";
 import Dashboard from "./pages/Dashboard";
 import Workers from "./pages/Workers";
 import Devices from "./pages/Devices";
@@ -10,7 +11,6 @@ import CreateEmployee from "./pages/CreateEmployee";
 import GenerateDevice from "./pages/GenerateDevice";
 import GenerateGateway from "./pages/GenerateGateway";
 import Settings from "./pages/Settings";
-
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
 import Organization from "./pages/Organization";
@@ -36,6 +36,15 @@ export default function App() {
             path="/login"
             element={<Login />}
           />
+
+          <Route
+  path="/access-control"
+  element={
+    <ProtectedRoute>
+      <AccessControl />
+    </ProtectedRoute>
+  }
+/>
 
           <Route
             path="/dashboard"
