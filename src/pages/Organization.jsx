@@ -1,90 +1,182 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import api from "../api/axios";
 
+import { useAppSettings } from "../context/AppSettingsContext";
+
 const Organization = () => {
-  const [activeTab, setActiveTab] = useState("departments");
+  const {
+    language,
+    theme,
+    t,
+  } = useAppSettings();
 
-  const [departments, setDepartments] = useState([]);
-  const [positions, setPositions] = useState([]);
-  const [teams, setTeams] = useState([]);
+  const [activeTab, setActiveTab] =
+    useState("departments");
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [departments, setDepartments] =
+    useState([]);
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [positions, setPositions] =
+    useState([]);
 
-  const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
+  const [teams, setTeams] =
+    useState([]);
 
-  const [departmentForm, setDepartmentForm] = useState({
-    name: "",
-    code: "",
-    description: "",
-    active: true,
-    order: 0,
-  });
+  const [loading, setLoading] =
+    useState(true);
 
-  const [positionForm, setPositionForm] = useState({
-    name: "",
-    code: "",
-    description: "",
-    department: "",
-    level: "mid",
-    active: true,
-    order: 0,
-  });
+  const [saving, setSaving] =
+    useState(false);
 
-  const [teamForm, setTeamForm] = useState({
-    name: "",
-    code: "",
-    description: "",
-    department: "",
-    active: true,
-    order: 0,
-  });
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [showModal, setShowModal] =
+    useState(false);
+
+  const [editingItem, setEditingItem] =
+    useState(null);
+
+  const [departmentForm, setDepartmentForm] =
+    useState({
+      name: "",
+      code: "",
+      description: "",
+      active: true,
+      order: 0,
+    });
+
+  const [positionForm, setPositionForm] =
+    useState({
+      name: "",
+      code: "",
+      description: "",
+      department: "",
+      level: "mid",
+      active: true,
+      order: 0,
+    });
+
+  const [teamForm, setTeamForm] =
+    useState({
+      name: "",
+      code: "",
+      description: "",
+      department: "",
+      active: true,
+      order: 0,
+    });
+
+  /*
+  |--------------------------------------------------------------------------
+  | TRANSLATION
+  |--------------------------------------------------------------------------
+  */
+
+  const translate = (
+    key,
+    english,
+    kinyarwanda = english
+  ) => {
+    const translated =
+      typeof t === "function"
+        ? t(key)
+        : "";
+
+    if (
+      translated &&
+      translated !== key
+    ) {
+      return translated;
+    }
+
+    return language === "rw"
+      ? kinyarwanda
+      : english;
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | MESSAGES
+  |--------------------------------------------------------------------------
+  */
 
   const clearMessages = () => {
     setMessage("");
     setError("");
   };
 
-  const loadOrganization = async () => {
-    try {
-      setLoading(true);
-      clearMessages();
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD ORGANIZATION
+  |--------------------------------------------------------------------------
+  */
 
-      const [departmentResponse, positionResponse, teamResponse] =
-        await Promise.all([
+  const loadOrganization =
+    async () => {
+      try {
+        setLoading(true);
+        clearMessages();
+
+        const [
+          departmentResponse,
+          positionResponse,
+          teamResponse,
+        ] = await Promise.all([
           api.get("/departments"),
           api.get("/positions"),
           api.get("/teams"),
         ]);
 
-      setDepartments(
-        departmentResponse.data.departments || []
-      );
+        setDepartments(
+          departmentResponse.data
+            .departments || []
+        );
 
-      setPositions(
-        positionResponse.data.positions || []
-      );
+        setPositions(
+          positionResponse.data
+            .positions || []
+        );
 
-      setTeams(teamResponse.data.teams || []);
-    } catch (err) {
-      console.error("LOAD ORGANIZATION ERROR:", err);
+        setTeams(
+          teamResponse.data.teams || []
+        );
+      } catch (err) {
+        console.error(
+          "LOAD ORGANIZATION ERROR:",
+          err
+        );
 
-      setError(
-        err.response?.data?.error ||
-          "Failed to load organization structure"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        setError(
+          err.response?.data?.error ||
+            translate(
+              "organizationLoadError",
+              "Failed to load organization structure",
+              "Kubona imiterere y'umuryango byanze"
+            )
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     loadOrganization();
   }, []);
+
+  /*
+  |--------------------------------------------------------------------------
+  | RESET
+  |--------------------------------------------------------------------------
+  */
 
   const resetForms = () => {
     setDepartmentForm({
@@ -131,14 +223,24 @@ const Organization = () => {
     setShowModal(true);
   };
 
-  const openEditDepartment = (department) => {
+  /*
+  |--------------------------------------------------------------------------
+  | EDIT
+  |--------------------------------------------------------------------------
+  */
+
+  const openEditDepartment = (
+    department
+  ) => {
     setEditingItem(department);
 
     setDepartmentForm({
       name: department.name || "",
       code: department.code || "",
-      description: department.description || "",
-      active: department.active !== false,
+      description:
+        department.description || "",
+      active:
+        department.active !== false,
       order: department.order || 0,
     });
 
@@ -146,16 +248,24 @@ const Organization = () => {
     setShowModal(true);
   };
 
-  const openEditPosition = (position) => {
+  const openEditPosition = (
+    position
+  ) => {
     setEditingItem(position);
 
     setPositionForm({
       name: position.name || "",
       code: position.code || "",
-      description: position.description || "",
-      department: position.department?._id || position.department || "",
-      level: position.level || "mid",
-      active: position.active !== false,
+      description:
+        position.description || "",
+      department:
+        position.department?._id ||
+        position.department ||
+        "",
+      level:
+        position.level || "mid",
+      active:
+        position.active !== false,
       order: position.order || 0,
     });
 
@@ -169,9 +279,14 @@ const Organization = () => {
     setTeamForm({
       name: team.name || "",
       code: team.code || "",
-      description: team.description || "",
-      department: team.department?._id || team.department || "",
-      active: team.active !== false,
+      description:
+        team.description || "",
+      department:
+        team.department?._id ||
+        team.department ||
+        "",
+      active:
+        team.active !== false,
       order: team.order || 0,
     });
 
@@ -179,34 +294,82 @@ const Organization = () => {
     setShowModal(true);
   };
 
-  const handleDepartmentChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  /*
+  |--------------------------------------------------------------------------
+  | FORM CHANGES
+  |--------------------------------------------------------------------------
+  */
 
-    setDepartmentForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+  const handleDepartmentChange = (
+    e
+  ) => {
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = e.target;
+
+    setDepartmentForm(
+      (prev) => ({
+        ...prev,
+        [name]:
+          type === "checkbox"
+            ? checked
+            : value,
+      })
+    );
   };
 
-  const handlePositionChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handlePositionChange = (
+    e
+  ) => {
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = e.target;
 
-    setPositionForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setPositionForm(
+      (prev) => ({
+        ...prev,
+        [name]:
+          type === "checkbox"
+            ? checked
+            : value,
+      })
+    );
   };
 
   const handleTeamChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = e.target;
 
-    setTeamForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setTeamForm(
+      (prev) => ({
+        ...prev,
+        [name]:
+          type === "checkbox"
+            ? checked
+            : value,
+      })
+    );
   };
 
-  const saveDepartment = async (e) => {
+  /*
+  |--------------------------------------------------------------------------
+  | SAVE DEPARTMENT
+  |--------------------------------------------------------------------------
+  */
+
+  const saveDepartment = async (
+    e
+  ) => {
     e.preventDefault();
 
     try {
@@ -214,15 +377,38 @@ const Organization = () => {
       clearMessages();
 
       const payload = {
-        name: departmentForm.name.trim(),
-        code: departmentForm.code.trim().toUpperCase(),
-        description: departmentForm.description.trim(),
-        active: departmentForm.active,
-        order: Number(departmentForm.order) || 0,
+        name:
+          departmentForm.name.trim(),
+
+        code:
+          departmentForm.code
+            .trim()
+            .toUpperCase(),
+
+        description:
+          departmentForm.description.trim(),
+
+        active:
+          departmentForm.active,
+
+        order:
+          Number(
+            departmentForm.order
+          ) || 0,
       };
 
-      if (!payload.name || !payload.code) {
-        setError("Department name and code are required");
+      if (
+        !payload.name ||
+        !payload.code
+      ) {
+        setError(
+          translate(
+            "departmentRequired",
+            "Department name and code are required",
+            "Izina rya department na code birakenewe"
+          )
+        );
+
         return;
       }
 
@@ -232,29 +418,60 @@ const Organization = () => {
           payload
         );
 
-        setMessage("Department updated successfully");
+        setMessage(
+          translate(
+            "departmentUpdated",
+            "Department updated successfully",
+            "Department yavuguruwe neza"
+          )
+        );
       } else {
-        await api.post("/departments", payload);
+        await api.post(
+          "/departments",
+          payload
+        );
 
-        setMessage("Department created successfully");
+        setMessage(
+          translate(
+            "departmentCreated",
+            "Department created successfully",
+            "Department yakozwe neza"
+          )
+        );
       }
 
       await loadOrganization();
+
       setShowModal(false);
       resetForms();
     } catch (err) {
-      console.error("SAVE DEPARTMENT ERROR:", err);
+      console.error(
+        "SAVE DEPARTMENT ERROR:",
+        err
+      );
 
       setError(
         err.response?.data?.error ||
-          "Failed to save department"
+          translate(
+            "departmentSaveError",
+            "Failed to save department",
+            "Kubika department byanze"
+          )
       );
     } finally {
       setSaving(false);
     }
   };
 
-  const savePosition = async (e) => {
+  /*
+  |--------------------------------------------------------------------------
+  | SAVE POSITION
+  |--------------------------------------------------------------------------
+  */
+
+  const savePosition = async (
+    e
+  ) => {
     e.preventDefault();
 
     try {
@@ -262,13 +479,30 @@ const Organization = () => {
       clearMessages();
 
       const payload = {
-        name: positionForm.name.trim(),
-        code: positionForm.code.trim().toUpperCase(),
-        description: positionForm.description.trim(),
-        department: positionForm.department,
-        level: positionForm.level,
-        active: positionForm.active,
-        order: Number(positionForm.order) || 0,
+        name:
+          positionForm.name.trim(),
+
+        code:
+          positionForm.code
+            .trim()
+            .toUpperCase(),
+
+        description:
+          positionForm.description.trim(),
+
+        department:
+          positionForm.department,
+
+        level:
+          positionForm.level,
+
+        active:
+          positionForm.active,
+
+        order:
+          Number(
+            positionForm.order
+          ) || 0,
       };
 
       if (
@@ -277,8 +511,13 @@ const Organization = () => {
         !payload.department
       ) {
         setError(
-          "Position name, code and department are required"
+          translate(
+            "positionRequired",
+            "Position name, code and department are required",
+            "Izina rya position, code na department birakenewe"
+          )
         );
+
         return;
       }
 
@@ -288,27 +527,56 @@ const Organization = () => {
           payload
         );
 
-        setMessage("Position updated successfully");
+        setMessage(
+          translate(
+            "positionUpdated",
+            "Position updated successfully",
+            "Position yavuguruwe neza"
+          )
+        );
       } else {
-        await api.post("/positions", payload);
+        await api.post(
+          "/positions",
+          payload
+        );
 
-        setMessage("Position created successfully");
+        setMessage(
+          translate(
+            "positionCreated",
+            "Position created successfully",
+            "Position yakozwe neza"
+          )
+        );
       }
 
       await loadOrganization();
+
       setShowModal(false);
       resetForms();
     } catch (err) {
-      console.error("SAVE POSITION ERROR:", err);
+      console.error(
+        "SAVE POSITION ERROR:",
+        err
+      );
 
       setError(
         err.response?.data?.error ||
-          "Failed to save position"
+          translate(
+            "positionSaveError",
+            "Failed to save position",
+            "Kubika position byanze"
+          )
       );
     } finally {
       setSaving(false);
     }
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | SAVE TEAM
+  |--------------------------------------------------------------------------
+  */
 
   const saveTeam = async (e) => {
     e.preventDefault();
@@ -318,12 +586,27 @@ const Organization = () => {
       clearMessages();
 
       const payload = {
-        name: teamForm.name.trim(),
-        code: teamForm.code.trim().toUpperCase(),
-        description: teamForm.description.trim(),
-        department: teamForm.department,
-        active: teamForm.active,
-        order: Number(teamForm.order) || 0,
+        name:
+          teamForm.name.trim(),
+
+        code:
+          teamForm.code
+            .trim()
+            .toUpperCase(),
+
+        description:
+          teamForm.description.trim(),
+
+        department:
+          teamForm.department,
+
+        active:
+          teamForm.active,
+
+        order:
+          Number(
+            teamForm.order
+          ) || 0,
       };
 
       if (
@@ -332,8 +615,13 @@ const Organization = () => {
         !payload.department
       ) {
         setError(
-          "Team name, code and department are required"
+          translate(
+            "teamRequired",
+            "Team name, code and department are required",
+            "Izina rya team, code na department birakenewe"
+          )
         );
+
         return;
       }
 
@@ -343,32 +631,68 @@ const Organization = () => {
           payload
         );
 
-        setMessage("Team updated successfully");
+        setMessage(
+          translate(
+            "teamUpdated",
+            "Team updated successfully",
+            "Team yavuguruwe neza"
+          )
+        );
       } else {
-        await api.post("/teams", payload);
+        await api.post(
+          "/teams",
+          payload
+        );
 
-        setMessage("Team created successfully");
+        setMessage(
+          translate(
+            "teamCreated",
+            "Team created successfully",
+            "Team yakozwe neza"
+          )
+        );
       }
 
       await loadOrganization();
+
       setShowModal(false);
       resetForms();
     } catch (err) {
-      console.error("SAVE TEAM ERROR:", err);
+      console.error(
+        "SAVE TEAM ERROR:",
+        err
+      );
 
       setError(
         err.response?.data?.error ||
-          "Failed to save team"
+          translate(
+            "teamSaveError",
+            "Failed to save team",
+            "Kubika team byanze"
+          )
       );
     } finally {
       setSaving(false);
     }
   };
 
-  const deleteDepartment = async (department) => {
-    const confirmed = window.confirm(
-      `Delete "${department.name}"?`
-    );
+  /*
+  |--------------------------------------------------------------------------
+  | DELETE
+  |--------------------------------------------------------------------------
+  */
+
+  const deleteDepartment = async (
+    department
+  ) => {
+    const confirmed =
+      window.confirm(
+        translate(
+          "deleteDepartmentConfirm",
+          `Delete "${department.name}"?`,
+          `Gusiba "${department.name}"?`
+        )
+      );
 
     if (!confirmed) return;
 
@@ -379,23 +703,43 @@ const Organization = () => {
         `/departments/${department._id}`
       );
 
-      setMessage("Department deleted successfully");
+      setMessage(
+        translate(
+          "departmentDeleted",
+          "Department deleted successfully",
+          "Department yasibwe neza"
+        )
+      );
 
       await loadOrganization();
     } catch (err) {
-      console.error("DELETE DEPARTMENT ERROR:", err);
+      console.error(
+        "DELETE DEPARTMENT ERROR:",
+        err
+      );
 
       setError(
         err.response?.data?.error ||
-          "Failed to delete department"
+          translate(
+            "departmentDeleteError",
+            "Failed to delete department",
+            "Gusiba department byanze"
+          )
       );
     }
   };
 
-  const deletePosition = async (position) => {
-    const confirmed = window.confirm(
-      `Delete "${position.name}"?`
-    );
+  const deletePosition = async (
+    position
+  ) => {
+    const confirmed =
+      window.confirm(
+        translate(
+          "deletePositionConfirm",
+          `Delete "${position.name}"?`,
+          `Gusiba "${position.name}"?`
+        )
+      );
 
     if (!confirmed) return;
 
@@ -406,78 +750,229 @@ const Organization = () => {
         `/positions/${position._id}`
       );
 
-      setMessage("Position deleted successfully");
+      setMessage(
+        translate(
+          "positionDeleted",
+          "Position deleted successfully",
+          "Position yasibwe neza"
+        )
+      );
 
       await loadOrganization();
     } catch (err) {
-      console.error("DELETE POSITION ERROR:", err);
+      console.error(
+        "DELETE POSITION ERROR:",
+        err
+      );
 
       setError(
         err.response?.data?.error ||
-          "Failed to delete position"
+          translate(
+            "positionDeleteError",
+            "Failed to delete position",
+            "Gusiba position byanze"
+          )
       );
     }
   };
 
-  const deleteTeam = async (team) => {
-    const confirmed = window.confirm(
-      `Delete "${team.name}"?`
-    );
+  const deleteTeam = async (
+    team
+  ) => {
+    const confirmed =
+      window.confirm(
+        translate(
+          "deleteTeamConfirm",
+          `Delete "${team.name}"?`,
+          `Gusiba "${team.name}"?`
+        )
+      );
 
     if (!confirmed) return;
 
     try {
       clearMessages();
 
-      await api.delete(`/teams/${team._id}`);
+      await api.delete(
+        `/teams/${team._id}`
+      );
 
-      setMessage("Team deleted successfully");
+      setMessage(
+        translate(
+          "teamDeleted",
+          "Team deleted successfully",
+          "Team yasibwe neza"
+        )
+      );
 
       await loadOrganization();
     } catch (err) {
-      console.error("DELETE TEAM ERROR:", err);
+      console.error(
+        "DELETE TEAM ERROR:",
+        err
+      );
 
       setError(
         err.response?.data?.error ||
-          "Failed to delete team"
+          translate(
+            "teamDeleteError",
+            "Failed to delete team",
+            "Gusiba team byanze"
+          )
       );
     }
   };
 
-  const getDepartmentName = (department) => {
+  /*
+  |--------------------------------------------------------------------------
+  | HELPERS
+  |--------------------------------------------------------------------------
+  */
+
+  const getDepartmentName = (
+    department
+  ) => {
     if (!department) return "—";
 
-    if (typeof department === "object") {
-      return department.name || "—";
+    if (
+      typeof department === "object"
+    ) {
+      return (
+        department.name || "—"
+      );
     }
 
-    const found = departments.find(
-      (item) => item._id === department
-    );
+    const found =
+      departments.find(
+        (item) =>
+          item._id === department
+      );
 
     return found?.name || "—";
   };
 
-  const activeDepartments = useMemo(
-    () => departments.filter((item) => item.active),
-    [departments]
-  );
+  const activeDepartments =
+    useMemo(
+      () =>
+        departments.filter(
+          (item) => item.active
+        ),
+      [departments]
+    );
 
-  const activePositions = useMemo(
-    () => positions.filter((item) => item.active),
-    [positions]
-  );
+  const activePositions =
+    useMemo(
+      () =>
+        positions.filter(
+          (item) => item.active
+        ),
+      [positions]
+    );
 
-  const activeTeams = useMemo(
-    () => teams.filter((item) => item.active),
-    [teams]
-  );
+  const activeTeams =
+    useMemo(
+      () =>
+        teams.filter(
+          (item) => item.active
+        ),
+      [teams]
+    );
+
+  /*
+  |--------------------------------------------------------------------------
+  | LEVEL LABEL
+  |--------------------------------------------------------------------------
+  */
+
+  const getLevelLabel = (
+    level
+  ) => {
+    const labels = {
+      executive: translate(
+        "executive",
+        "Executive",
+        "Ubuyobozi Bukuru"
+      ),
+
+      management: translate(
+        "management",
+        "Management",
+        "Ubuyobozi"
+      ),
+
+      senior: translate(
+        "senior",
+        "Senior",
+        "Senior"
+      ),
+
+      mid: translate(
+        "midLevel",
+        "Mid-level",
+        "Hagati"
+      ),
+
+      junior: translate(
+        "junior",
+        "Junior",
+        "Junior"
+      ),
+
+      entry: translate(
+        "entry",
+        "Entry",
+        "Intangiriro"
+      ),
+
+      intern: translate(
+        "intern",
+        "Intern",
+        "Umwimenyereza"
+      ),
+    };
+
+    return (
+      labels[level] ||
+      level ||
+      "—"
+    );
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | MODAL
+  |--------------------------------------------------------------------------
+  */
 
   const renderModal = () => {
     if (!showModal) return null;
 
-    const isDepartment = activeTab === "departments";
-    const isPosition = activeTab === "positions";
+    const isDepartment =
+      activeTab ===
+      "departments";
+
+    const isPosition =
+      activeTab ===
+      "positions";
+
+    const entityName =
+      isDepartment
+        ? translate(
+            "department",
+            "Department",
+            "Department"
+          )
+        : isPosition
+        ? translate(
+            "position",
+            "Position",
+            "Position"
+          )
+        : translate(
+            "team",
+            "Team",
+            "Team"
+          );
 
     return (
       <div className="org-modal-backdrop">
@@ -486,18 +981,25 @@ const Organization = () => {
             <div>
               <h2>
                 {editingItem
-                  ? "Edit"
-                  : "Add"}{" "}
-                {isDepartment
-                  ? "Department"
-                  : isPosition
-                  ? "Position"
-                  : "Team"}
+                  ? translate(
+                      "edit",
+                      "Edit",
+                      "Hindura"
+                    )
+                  : translate(
+                      "add",
+                      "Add",
+                      "Ongeramo"
+                    )}{" "}
+                {entityName}
               </h2>
 
               <p>
-                Configure ANTIMATE organizational
-                structure.
+                {translate(
+                  "organizationModalDescription",
+                  "Configure ANTIMATE organizational structure.",
+                  "Tegura imiterere y'umuryango wa ANTIMATE."
+                )}
               </p>
             </div>
 
@@ -505,6 +1007,11 @@ const Organization = () => {
               className="org-close-button"
               onClick={closeModal}
               type="button"
+              aria-label={translate(
+                "close",
+                "Close",
+                "Funga"
+              )}
             >
               ×
             </button>
@@ -518,29 +1025,55 @@ const Organization = () => {
 
           {isDepartment && (
             <form
-              onSubmit={saveDepartment}
+              onSubmit={
+                saveDepartment
+              }
               className="org-form"
             >
               <div className="org-form-grid">
                 <div className="org-field">
-                  <label>Department Name</label>
+                  <label>
+                    {translate(
+                      "departmentName",
+                      "Department Name",
+                      "Izina rya Department"
+                    )}
+                  </label>
 
                   <input
                     name="name"
-                    value={departmentForm.name}
-                    onChange={handleDepartmentChange}
-                    placeholder="e.g. Technology & Engineering"
+                    value={
+                      departmentForm.name
+                    }
+                    onChange={
+                      handleDepartmentChange
+                    }
+                    placeholder={
+                      language === "rw"
+                        ? "Urugero: Technology & Engineering"
+                        : "e.g. Technology & Engineering"
+                    }
                     required
                   />
                 </div>
 
                 <div className="org-field">
-                  <label>Code</label>
+                  <label>
+                    {translate(
+                      "code",
+                      "Code",
+                      "Code"
+                    )}
+                  </label>
 
                   <input
                     name="code"
-                    value={departmentForm.code}
-                    onChange={handleDepartmentChange}
+                    value={
+                      departmentForm.code
+                    }
+                    onChange={
+                      handleDepartmentChange
+                    }
                     placeholder="e.g. TECH"
                     required
                   />
@@ -548,26 +1081,50 @@ const Organization = () => {
               </div>
 
               <div className="org-field">
-                <label>Description</label>
+                <label>
+                  {translate(
+                    "description",
+                    "Description",
+                    "Ibisobanuro"
+                  )}
+                </label>
 
                 <textarea
                   name="description"
-                  value={departmentForm.description}
-                  onChange={handleDepartmentChange}
-                  placeholder="Describe the department..."
+                  value={
+                    departmentForm.description
+                  }
+                  onChange={
+                    handleDepartmentChange
+                  }
+                  placeholder={
+                    language === "rw"
+                      ? "Sobanura iyi department..."
+                      : "Describe the department..."
+                  }
                   rows="4"
                 />
               </div>
 
               <div className="org-form-grid">
                 <div className="org-field">
-                  <label>Display Order</label>
+                  <label>
+                    {translate(
+                      "displayOrder",
+                      "Display Order",
+                      "Uko bigomba gukurikirana"
+                    )}
+                  </label>
 
                   <input
                     type="number"
                     name="order"
-                    value={departmentForm.order}
-                    onChange={handleDepartmentChange}
+                    value={
+                      departmentForm.order
+                    }
+                    onChange={
+                      handleDepartmentChange
+                    }
                   />
                 </div>
 
@@ -575,11 +1132,21 @@ const Organization = () => {
                   <input
                     type="checkbox"
                     name="active"
-                    checked={departmentForm.active}
-                    onChange={handleDepartmentChange}
+                    checked={
+                      departmentForm.active
+                    }
+                    onChange={
+                      handleDepartmentChange
+                    }
                   />
 
-                  <span>Active Department</span>
+                  <span>
+                    {translate(
+                      "activeDepartment",
+                      "Active Department",
+                      "Department ikora"
+                    )}
+                  </span>
                 </label>
               </div>
 
@@ -587,9 +1154,15 @@ const Organization = () => {
                 <button
                   type="button"
                   className="org-button secondary"
-                  onClick={closeModal}
+                  onClick={
+                    closeModal
+                  }
                 >
-                  Cancel
+                  {translate(
+                    "cancel",
+                    "Cancel",
+                    "Kureka"
+                  )}
                 </button>
 
                 <button
@@ -598,10 +1171,22 @@ const Organization = () => {
                   disabled={saving}
                 >
                   {saving
-                    ? "Saving..."
+                    ? translate(
+                        "saving",
+                        "Saving...",
+                        "Birabikwa..."
+                      )
                     : editingItem
-                    ? "Save Changes"
-                    : "Create Department"}
+                    ? translate(
+                        "saveChanges",
+                        "Save Changes",
+                        "Bika impinduka"
+                      )
+                    : translate(
+                        "createDepartment",
+                        "Create Department",
+                        "Kora Department"
+                      )}
                 </button>
               </div>
             </form>
@@ -609,29 +1194,55 @@ const Organization = () => {
 
           {isPosition && (
             <form
-              onSubmit={savePosition}
+              onSubmit={
+                savePosition
+              }
               className="org-form"
             >
               <div className="org-form-grid">
                 <div className="org-field">
-                  <label>Position Name</label>
+                  <label>
+                    {translate(
+                      "positionName",
+                      "Position Name",
+                      "Izina rya Position"
+                    )}
+                  </label>
 
                   <input
                     name="name"
-                    value={positionForm.name}
-                    onChange={handlePositionChange}
-                    placeholder="e.g. Software Engineer"
+                    value={
+                      positionForm.name
+                    }
+                    onChange={
+                      handlePositionChange
+                    }
+                    placeholder={
+                      language === "rw"
+                        ? "Urugero: Software Engineer"
+                        : "e.g. Software Engineer"
+                    }
                     required
                   />
                 </div>
 
                 <div className="org-field">
-                  <label>Code</label>
+                  <label>
+                    {translate(
+                      "code",
+                      "Code",
+                      "Code"
+                    )}
+                  </label>
 
                   <input
                     name="code"
-                    value={positionForm.code}
-                    onChange={handlePositionChange}
+                    value={
+                      positionForm.code
+                    }
+                    onChange={
+                      handlePositionChange
+                    }
                     placeholder="e.g. SWE"
                     required
                   />
@@ -640,25 +1251,47 @@ const Organization = () => {
 
               <div className="org-form-grid">
                 <div className="org-field">
-                  <label>Department</label>
+                  <label>
+                    {translate(
+                      "department",
+                      "Department",
+                      "Department"
+                    )}
+                  </label>
 
                   <select
                     name="department"
-                    value={positionForm.department}
-                    onChange={handlePositionChange}
+                    value={
+                      positionForm.department
+                    }
+                    onChange={
+                      handlePositionChange
+                    }
                     required
                   >
                     <option value="">
-                      Select department
+                      {translate(
+                        "selectDepartment",
+                        "Select department",
+                        "Hitamo department"
+                      )}
                     </option>
 
                     {activeDepartments.map(
-                      (department) => (
+                      (
+                        department
+                      ) => (
                         <option
-                          key={department._id}
-                          value={department._id}
+                          key={
+                            department._id
+                          }
+                          value={
+                            department._id
+                          }
                         >
-                          {department.name}
+                          {
+                            department.name
+                          }
                         </option>
                       )
                     )}
@@ -666,176 +1299,113 @@ const Organization = () => {
                 </div>
 
                 <div className="org-field">
-                  <label>Level</label>
+                  <label>
+                    {translate(
+                      "level",
+                      "Level",
+                      "Urwego"
+                    )}
+                  </label>
 
                   <select
                     name="level"
-                    value={positionForm.level}
-                    onChange={handlePositionChange}
+                    value={
+                      positionForm.level
+                    }
+                    onChange={
+                      handlePositionChange
+                    }
                   >
                     <option value="executive">
-                      Executive
+                      {getLevelLabel(
+                        "executive"
+                      )}
                     </option>
+
                     <option value="management">
-                      Management
+                      {getLevelLabel(
+                        "management"
+                      )}
                     </option>
+
                     <option value="senior">
-                      Senior
+                      {getLevelLabel(
+                        "senior"
+                      )}
                     </option>
+
                     <option value="mid">
-                      Mid-level
+                      {getLevelLabel(
+                        "mid"
+                      )}
                     </option>
+
                     <option value="junior">
-                      Junior
+                      {getLevelLabel(
+                        "junior"
+                      )}
                     </option>
+
                     <option value="entry">
-                      Entry
+                      {getLevelLabel(
+                        "entry"
+                      )}
                     </option>
+
                     <option value="intern">
-                      Intern
+                      {getLevelLabel(
+                        "intern"
+                      )}
                     </option>
                   </select>
                 </div>
               </div>
 
               <div className="org-field">
-                <label>Description</label>
-
-                <textarea
-                  name="description"
-                  value={positionForm.description}
-                  onChange={handlePositionChange}
-                  placeholder="Describe the position..."
-                  rows="4"
-                />
-              </div>
-
-              <div className="org-form-grid">
-                <div className="org-field">
-                  <label>Display Order</label>
-
-                  <input
-                    type="number"
-                    name="order"
-                    value={positionForm.order}
-                    onChange={handlePositionChange}
-                  />
-                </div>
-
-                <label className="org-checkbox">
-                  <input
-                    type="checkbox"
-                    name="active"
-                    checked={positionForm.active}
-                    onChange={handlePositionChange}
-                  />
-
-                  <span>Active Position</span>
-                </label>
-              </div>
-
-              <div className="org-modal-actions">
-                <button
-                  type="button"
-                  className="org-button secondary"
-                  onClick={closeModal}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="org-button primary"
-                  disabled={saving}
-                >
-                  {saving
-                    ? "Saving..."
-                    : editingItem
-                    ? "Save Changes"
-                    : "Create Position"}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {!isDepartment && !isPosition && (
-            <form
-              onSubmit={saveTeam}
-              className="org-form"
-            >
-              <div className="org-form-grid">
-                <div className="org-field">
-                  <label>Team Name</label>
-
-                  <input
-                    name="name"
-                    value={teamForm.name}
-                    onChange={handleTeamChange}
-                    placeholder="e.g. ANTIMATE AI Team"
-                    required
-                  />
-                </div>
-
-                <div className="org-field">
-                  <label>Code</label>
-
-                  <input
-                    name="code"
-                    value={teamForm.code}
-                    onChange={handleTeamChange}
-                    placeholder="e.g. AI"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="org-field">
-                <label>Department</label>
-
-                <select
-                  name="department"
-                  value={teamForm.department}
-                  onChange={handleTeamChange}
-                  required
-                >
-                  <option value="">
-                    Select department
-                  </option>
-
-                  {activeDepartments.map(
-                    (department) => (
-                      <option
-                        key={department._id}
-                        value={department._id}
-                      >
-                        {department.name}
-                      </option>
-                    )
+                <label>
+                  {translate(
+                    "description",
+                    "Description",
+                    "Ibisobanuro"
                   )}
-                </select>
-              </div>
-
-              <div className="org-field">
-                <label>Description</label>
+                </label>
 
                 <textarea
                   name="description"
-                  value={teamForm.description}
-                  onChange={handleTeamChange}
-                  placeholder="Describe the team..."
+                  value={
+                    positionForm.description
+                  }
+                  onChange={
+                    handlePositionChange
+                  }
+                  placeholder={
+                    language === "rw"
+                      ? "Sobanura iyi position..."
+                      : "Describe the position..."
+                  }
                   rows="4"
                 />
               </div>
 
               <div className="org-form-grid">
                 <div className="org-field">
-                  <label>Display Order</label>
+                  <label>
+                    {translate(
+                      "displayOrder",
+                      "Display Order",
+                      "Uko bigomba gukurikirana"
+                    )}
+                  </label>
 
                   <input
                     type="number"
                     name="order"
-                    value={teamForm.order}
-                    onChange={handleTeamChange}
+                    value={
+                      positionForm.order
+                    }
+                    onChange={
+                      handlePositionChange
+                    }
                   />
                 </div>
 
@@ -843,11 +1413,21 @@ const Organization = () => {
                   <input
                     type="checkbox"
                     name="active"
-                    checked={teamForm.active}
-                    onChange={handleTeamChange}
+                    checked={
+                      positionForm.active
+                    }
+                    onChange={
+                      handlePositionChange
+                    }
                   />
 
-                  <span>Active Team</span>
+                  <span>
+                    {translate(
+                      "activePosition",
+                      "Active Position",
+                      "Position ikora"
+                    )}
+                  </span>
                 </label>
               </div>
 
@@ -855,9 +1435,15 @@ const Organization = () => {
                 <button
                   type="button"
                   className="org-button secondary"
-                  onClick={closeModal}
+                  onClick={
+                    closeModal
+                  }
                 >
-                  Cancel
+                  {translate(
+                    "cancel",
+                    "Cancel",
+                    "Kureka"
+                  )}
                 </button>
 
                 <button
@@ -866,192 +1452,770 @@ const Organization = () => {
                   disabled={saving}
                 >
                   {saving
-                    ? "Saving..."
+                    ? translate(
+                        "saving",
+                        "Saving...",
+                        "Birabikwa..."
+                      )
                     : editingItem
-                    ? "Save Changes"
-                    : "Create Team"}
+                    ? translate(
+                        "saveChanges",
+                        "Save Changes",
+                        "Bika impinduka"
+                      )
+                    : translate(
+                        "createPosition",
+                        "Create Position",
+                        "Kora Position"
+                      )}
                 </button>
               </div>
             </form>
           )}
+
+          {!isDepartment &&
+            !isPosition && (
+              <form
+                onSubmit={saveTeam}
+                className="org-form"
+              >
+                <div className="org-form-grid">
+                  <div className="org-field">
+                    <label>
+                      {translate(
+                        "teamName",
+                        "Team Name",
+                        "Izina rya Team"
+                      )}
+                    </label>
+
+                    <input
+                      name="name"
+                      value={
+                        teamForm.name
+                      }
+                      onChange={
+                        handleTeamChange
+                      }
+                      placeholder={
+                        language ===
+                        "rw"
+                          ? "Urugero: ANTIMATE AI Team"
+                          : "e.g. ANTIMATE AI Team"
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="org-field">
+                    <label>
+                      {translate(
+                        "code",
+                        "Code",
+                        "Code"
+                      )}
+                    </label>
+
+                    <input
+                      name="code"
+                      value={
+                        teamForm.code
+                      }
+                      onChange={
+                        handleTeamChange
+                      }
+                      placeholder="e.g. AI"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="org-field">
+                  <label>
+                    {translate(
+                      "department",
+                      "Department",
+                      "Department"
+                    )}
+                  </label>
+
+                  <select
+                    name="department"
+                    value={
+                      teamForm.department
+                    }
+                    onChange={
+                      handleTeamChange
+                    }
+                    required
+                  >
+                    <option value="">
+                      {translate(
+                        "selectDepartment",
+                        "Select department",
+                        "Hitamo department"
+                      )}
+                    </option>
+
+                    {activeDepartments.map(
+                      (
+                        department
+                      ) => (
+                        <option
+                          key={
+                            department._id
+                          }
+                          value={
+                            department._id
+                          }
+                        >
+                          {
+                            department.name
+                          }
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <div className="org-field">
+                  <label>
+                    {translate(
+                      "description",
+                      "Description",
+                      "Ibisobanuro"
+                    )}
+                  </label>
+
+                  <textarea
+                    name="description"
+                    value={
+                      teamForm.description
+                    }
+                    onChange={
+                      handleTeamChange
+                    }
+                    placeholder={
+                      language ===
+                      "rw"
+                        ? "Sobanura iyi team..."
+                        : "Describe the team..."
+                    }
+                    rows="4"
+                  />
+                </div>
+
+                <div className="org-form-grid">
+                  <div className="org-field">
+                    <label>
+                      {translate(
+                        "displayOrder",
+                        "Display Order",
+                        "Uko bigomba gukurikirana"
+                      )}
+                    </label>
+
+                    <input
+                      type="number"
+                      name="order"
+                      value={
+                        teamForm.order
+                      }
+                      onChange={
+                        handleTeamChange
+                      }
+                    />
+                  </div>
+
+                  <label className="org-checkbox">
+                    <input
+                      type="checkbox"
+                      name="active"
+                      checked={
+                        teamForm.active
+                      }
+                      onChange={
+                        handleTeamChange
+                      }
+                    />
+
+                    <span>
+                      {translate(
+                        "activeTeam",
+                        "Active Team",
+                        "Team ikora"
+                      )}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="org-modal-actions">
+                  <button
+                    type="button"
+                    className="org-button secondary"
+                    onClick={
+                      closeModal
+                    }
+                  >
+                    {translate(
+                      "cancel",
+                      "Cancel",
+                      "Kureka"
+                    )}
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="org-button primary"
+                    disabled={saving}
+                  >
+                    {saving
+                      ? translate(
+                          "saving",
+                          "Saving...",
+                          "Birabikwa..."
+                        )
+                      : editingItem
+                      ? translate(
+                          "saveChanges",
+                          "Save Changes",
+                          "Bika impinduka"
+                        )
+                      : translate(
+                          "createTeam",
+                          "Create Team",
+                          "Kora Team"
+                        )}
+                  </button>
+                </div>
+              </form>
+            )}
         </div>
       </div>
     );
   };
 
+  /*
+  |--------------------------------------------------------------------------
+  | RENDER
+  |--------------------------------------------------------------------------
+  */
+
+  const activeEntityLabel =
+    activeTab === "departments"
+      ? translate(
+          "department",
+          "Department",
+          "Department"
+        )
+      : activeTab === "positions"
+      ? translate(
+          "position",
+          "Position",
+          "Position"
+        )
+      : translate(
+          "team",
+          "Team",
+          "Team"
+        );
+
+  const activePluralLabel =
+    activeTab === "departments"
+      ? translate(
+          "departments",
+          "Departments",
+          "Departments"
+        )
+      : activeTab === "positions"
+      ? translate(
+          "positions",
+          "Positions",
+          "Positions"
+        )
+      : translate(
+          "teams",
+          "Teams",
+          "Teams"
+        );
+
+  const activeCount =
+    activeTab === "departments"
+      ? departments.length
+      : activeTab === "positions"
+      ? positions.length
+      : teams.length;
+
   return (
-    <div className="organization-page">
+    <div
+      className={`organization-page ${
+        theme === "dark"
+          ? "organization-dark"
+          : "organization-light"
+      }`}
+    >
       <style>{`
+
+        /* ============================================================
+           ORGANIZATION THEME
+           ============================================================ */
+
         .organization-page {
+          --org-bg:
+            var(--admin-bg, #f8fafc);
+
+          --org-surface:
+            var(--admin-surface, #ffffff);
+
+          --org-surface-2:
+            var(--admin-surface-2, #f1f5f9);
+
+          --org-surface-3:
+            var(--admin-surface-3, #e2e8f0);
+
+          --org-border:
+            var(--admin-border, rgba(15, 23, 42, .10));
+
+          --org-border-strong:
+            var(--admin-border-strong, rgba(15, 23, 42, .18));
+
+          --org-text:
+            var(--admin-text, #0f172a);
+
+          --org-text-secondary:
+            var(--admin-text-secondary, #334155);
+
+          --org-muted:
+            var(--admin-text-muted, #64748b);
+
+          --org-primary:
+            var(--admin-primary, #3157d5);
+
+          --org-primary-hover:
+            var(--admin-primary-hover, #2749ba);
+
+          --org-success:
+            var(--admin-success, #22c55e);
+
+          --org-danger:
+            var(--admin-danger, #ef4444);
+
+          --org-warning:
+            var(--admin-warning, #f59e0b);
+
+          width: 100%;
           min-height: 100%;
+
           padding: 28px;
-          background: #f6f8fc;
-          color: #172033;
+
+          background:
+            var(--org-bg);
+
+          color:
+            var(--org-text);
+
+          transition:
+            background-color .2s ease,
+            color .2s ease;
+        }
+
+        .organization-dark {
+          --org-bg:
+            var(--admin-bg, #020617);
+
+          --org-surface:
+            var(--admin-surface, #0f172a);
+
+          --org-surface-2:
+            var(--admin-surface-2, #111827);
+
+          --org-surface-3:
+            var(--admin-surface-3, #1e293b);
+
+          --org-text:
+            var(--admin-text, #f8fafc);
+
+          --org-text-secondary:
+            var(--admin-text-secondary, #cbd5e1);
+
+          --org-muted:
+            var(--admin-text-muted, #94a3b8);
         }
 
         .org-container {
+          width: 100%;
           max-width: 1400px;
           margin: 0 auto;
         }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
 
         .org-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
+
           gap: 20px;
+
           margin-bottom: 24px;
         }
 
         .org-header h1 {
           margin: 0 0 7px;
+
+          color:
+            var(--org-text);
+
           font-size: 28px;
           font-weight: 750;
+
+          letter-spacing: -.02em;
         }
 
         .org-header p {
           margin: 0;
-          color: #687386;
+
+          color:
+            var(--org-muted);
+
           font-size: 14px;
+          line-height: 1.5;
         }
+
+        /* ============================================================
+           BUTTONS
+           ============================================================ */
 
         .org-button {
           border: 0;
+
           border-radius: 9px;
-          padding: 11px 17px;
+
+          padding:
+            11px 17px;
+
           font-size: 14px;
           font-weight: 650;
+
           cursor: pointer;
-          transition: .2s ease;
+
+          transition:
+            background-color .18s ease,
+            color .18s ease,
+            border-color .18s ease,
+            transform .18s ease;
+        }
+
+        .org-button:active {
+          transform:
+            translateY(1px);
         }
 
         .org-button:disabled {
           opacity: .6;
           cursor: not-allowed;
+          transform: none;
         }
 
         .org-button.primary {
-          background: #3157d5;
-          color: white;
+          background:
+            var(--org-primary);
+
+          color:
+            #ffffff;
         }
 
         .org-button.primary:hover {
-          background: #2749ba;
+          background:
+            var(--org-primary-hover);
         }
 
         .org-button.secondary {
-          background: #eef1f6;
-          color: #303a4d;
+          background:
+            var(--org-surface-3);
+
+          color:
+            var(--org-text-secondary);
+
+          border:
+            1px solid var(--org-border);
         }
 
         .org-button.secondary:hover {
-          background: #e3e7ef;
+          background:
+            var(--org-surface-2);
+
+          color:
+            var(--org-text);
         }
+
+        /* ============================================================
+           STATS
+           ============================================================ */
 
         .org-stats {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+
+          grid-template-columns:
+            repeat(3, 1fr);
+
           gap: 16px;
+
           margin-bottom: 22px;
         }
 
         .org-stat {
-          background: white;
-          border: 1px solid #e3e7ef;
+          background:
+            var(--org-surface);
+
+          border:
+            1px solid var(--org-border);
+
           border-radius: 13px;
+
           padding: 18px;
+
+          box-shadow:
+            0 3px 14px
+            rgba(15, 23, 42, .04);
+
+          transition:
+            background-color .2s ease,
+            border-color .2s ease;
+        }
+
+        .organization-dark .org-stat {
+          box-shadow: none;
         }
 
         .org-stat-label {
-          color: #758095;
+          color:
+            var(--org-muted);
+
           font-size: 13px;
+
           margin-bottom: 8px;
         }
 
         .org-stat-value {
+          color:
+            var(--org-text);
+
           font-size: 25px;
           font-weight: 750;
         }
 
+        /* ============================================================
+           TABS
+           ============================================================ */
+
         .org-tabs {
           display: flex;
+
           gap: 5px;
-          background: white;
-          border: 1px solid #e3e7ef;
+
+          background:
+            var(--org-surface);
+
+          border:
+            1px solid var(--org-border);
+
           border-radius: 11px;
+
           padding: 5px;
+
           margin-bottom: 18px;
+
+          overflow-x: auto;
+
+          scrollbar-width: none;
+        }
+
+        .org-tabs::-webkit-scrollbar {
+          display: none;
         }
 
         .org-tab {
           flex: 1;
+
+          min-width: 120px;
+
           border: 0;
-          background: transparent;
+
+          background:
+            transparent;
+
           border-radius: 8px;
-          padding: 12px 16px;
+
+          padding:
+            12px 16px;
+
           cursor: pointer;
-          color: #697489;
+
+          color:
+            var(--org-muted);
+
           font-weight: 650;
           font-size: 14px;
+
+          white-space: nowrap;
+
+          transition:
+            background-color .18s ease,
+            color .18s ease;
+        }
+
+        .org-tab:hover {
+          background:
+            var(--org-surface-2);
+
+          color:
+            var(--org-text);
         }
 
         .org-tab.active {
-          background: #eef2ff;
-          color: #3157d5;
+          background:
+            var(--org-primary);
+
+          color:
+            #ffffff;
         }
 
+        .org-tab.active:hover {
+          background:
+            var(--org-primary-hover);
+
+          color:
+            #ffffff;
+        }
+
+        /* ============================================================
+           PANEL
+           ============================================================ */
+
         .org-panel {
-          background: white;
-          border: 1px solid #e3e7ef;
+          background:
+            var(--org-surface);
+
+          border:
+            1px solid var(--org-border);
+
           border-radius: 13px;
+
           overflow: hidden;
+
+          box-shadow:
+            0 3px 16px
+            rgba(15, 23, 42, .035);
+        }
+
+        .organization-dark .org-panel {
+          box-shadow: none;
         }
 
         .org-panel-header {
-          padding: 19px 20px;
+          padding:
+            19px 20px;
+
           display: flex;
+
           justify-content: space-between;
           align-items: center;
-          border-bottom: 1px solid #edf0f4;
+
+          border-bottom:
+            1px solid var(--org-border);
         }
 
         .org-panel-header h2 {
           margin: 0 0 4px;
+
+          color:
+            var(--org-text);
+
           font-size: 17px;
+          font-weight: 700;
         }
 
         .org-panel-header p {
           margin: 0;
-          color: #7a8495;
+
+          color:
+            var(--org-muted);
+
           font-size: 13px;
         }
 
+        /* ============================================================
+           TABLE
+           ============================================================ */
+
         .org-table-wrap {
           width: 100%;
+
           overflow-x: auto;
+
+          -webkit-overflow-scrolling:
+            touch;
         }
 
         .org-table {
           width: 100%;
-          border-collapse: collapse;
+
+          border-collapse:
+            collapse;
+
           min-width: 760px;
         }
 
         .org-table th {
-          background: #fafbfc;
-          color: #697489;
+          background:
+            var(--org-surface-2);
+
+          color:
+            var(--org-muted);
+
           font-size: 12px;
-          text-transform: uppercase;
+
+          text-transform:
+            uppercase;
+
           letter-spacing: .04em;
+
           text-align: left;
-          padding: 13px 18px;
-          border-bottom: 1px solid #edf0f4;
+
+          padding:
+            13px 18px;
+
+          border-bottom:
+            1px solid var(--org-border);
         }
 
         .org-table td {
-          padding: 15px 18px;
-          border-bottom: 1px solid #f0f2f5;
+          padding:
+            15px 18px;
+
+          border-bottom:
+            1px solid var(--org-border);
+
+          color:
+            var(--org-text-secondary);
+
           font-size: 14px;
-          vertical-align: middle;
+
+          vertical-align:
+            middle;
+        }
+
+        .org-table tbody tr {
+          transition:
+            background-color .16s ease;
+        }
+
+        .org-table tbody tr:hover {
+          background:
+            var(--org-surface-2);
         }
 
         .org-table tr:last-child td {
@@ -1060,149 +2224,342 @@ const Organization = () => {
 
         .org-name {
           font-weight: 650;
-          color: #1c2638;
+
+          color:
+            var(--org-text);
         }
 
         .org-description {
-          color: #7a8495;
+          color:
+            var(--org-muted);
+
           max-width: 340px;
+
           line-height: 1.45;
         }
 
         .org-code {
           display: inline-flex;
-          padding: 4px 8px;
+
+          padding:
+            4px 8px;
+
           border-radius: 6px;
-          background: #f0f3f8;
-          color: #455067;
+
+          background:
+            var(--org-surface-3);
+
+          color:
+            var(--org-text-secondary);
+
           font-size: 12px;
+
           font-weight: 700;
+
           letter-spacing: .04em;
         }
 
+        /* ============================================================
+           STATUS
+           ============================================================ */
+
         .org-status {
           display: inline-flex;
+
           align-items: center;
+
           gap: 6px;
-          padding: 5px 9px;
+
+          padding:
+            5px 9px;
+
           border-radius: 20px;
+
           font-size: 12px;
+
           font-weight: 650;
         }
 
         .org-status.active {
-          background: #eaf8f0;
-          color: #23804b;
+          background:
+            rgba(34, 197, 94, .12);
+
+          color:
+            #22a05a;
+        }
+
+        .organization-dark
+        .org-status.active {
+          background:
+            rgba(34, 197, 94, .16);
+
+          color:
+            #4ade80;
         }
 
         .org-status.inactive {
-          background: #f1f2f4;
-          color: #737b89;
+          background:
+            var(--org-surface-3);
+
+          color:
+            var(--org-muted);
         }
+
+        /* ============================================================
+           ACTIONS
+           ============================================================ */
 
         .org-actions {
           display: flex;
+
           gap: 7px;
         }
 
         .org-action {
-          border: 1px solid #dfe3ea;
-          background: white;
-          color: #435069;
-          padding: 7px 10px;
+          border:
+            1px solid var(--org-border-strong);
+
+          background:
+            var(--org-surface);
+
+          color:
+            var(--org-text-secondary);
+
+          padding:
+            7px 10px;
+
           border-radius: 7px;
+
           cursor: pointer;
+
           font-size: 12px;
+
           font-weight: 650;
+
+          transition:
+            background-color .16s ease,
+            color .16s ease,
+            border-color .16s ease;
         }
 
         .org-action:hover {
-          background: #f6f8fb;
+          background:
+            var(--org-surface-2);
+
+          color:
+            var(--org-text);
         }
 
         .org-action.delete {
-          color: #c13b48;
+          color:
+            #dc4654;
         }
 
-        .org-empty {
-          padding: 45px 20px;
-          text-align: center;
-          color: #7b8595;
+        .org-action.delete:hover {
+          background:
+            rgba(239, 68, 68, .09);
+
+          border-color:
+            rgba(239, 68, 68, .25);
         }
 
+        /* ============================================================
+           EMPTY / LOADING
+           ============================================================ */
+
+        .org-empty,
         .org-loading {
-          padding: 60px 20px;
+          padding:
+            55px 20px;
+
           text-align: center;
-          color: #6f7a8c;
+
+          color:
+            var(--org-muted);
+
+          font-size: 14px;
         }
+
+        /* ============================================================
+           ALERTS
+           ============================================================ */
 
         .org-alert {
-          margin: 15px 20px;
-          padding: 11px 13px;
+          margin:
+            15px 0;
+
+          padding:
+            11px 13px;
+
           border-radius: 8px;
+
           font-size: 13px;
+
+          border:
+            1px solid transparent;
         }
 
         .org-alert-success {
-          background: #eaf8f0;
-          color: #247749;
+          background:
+            rgba(34, 197, 94, .10);
+
+          border-color:
+            rgba(34, 197, 94, .20);
+
+          color:
+            #20804b;
+        }
+
+        .organization-dark
+        .org-alert-success {
+          color:
+            #4ade80;
         }
 
         .org-alert-error {
-          background: #fff0f1;
-          color: #bd3e49;
+          background:
+            rgba(239, 68, 68, .09);
+
+          border-color:
+            rgba(239, 68, 68, .18);
+
+          color:
+            #c43f4d;
         }
+
+        .organization-dark
+        .org-alert-error {
+          color:
+            #f87171;
+        }
+
+        /* ============================================================
+           MODAL
+           ============================================================ */
 
         .org-modal-backdrop {
           position: fixed;
+
           inset: 0;
+
           z-index: 1000;
-          background: rgba(18, 25, 38, .48);
+
+          background:
+            rgba(2, 6, 23, .60);
+
           display: flex;
+
           align-items: center;
           justify-content: center;
+
           padding: 20px;
+
+          overflow-y: auto;
         }
 
         .org-modal {
-          width: min(650px, 100%);
-          max-height: 90vh;
-          overflow-y: auto;
-          background: white;
+          width:
+            min(650px, 100%);
+
+          max-height:
+            90vh;
+
+          overflow-y:
+            auto;
+
+          background:
+            var(--org-surface);
+
+          color:
+            var(--org-text);
+
+          border:
+            1px solid var(--org-border);
+
           border-radius: 15px;
-          box-shadow: 0 20px 60px rgba(0,0,0,.2);
+
+          box-shadow:
+            0 25px 80px
+            rgba(0, 0, 0, .28);
         }
 
         .org-modal-header {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+
+          justify-content:
+            space-between;
+
+          align-items:
+            flex-start;
+
+          gap: 15px;
+
           padding: 22px;
-          border-bottom: 1px solid #edf0f4;
+
+          border-bottom:
+            1px solid var(--org-border);
         }
 
         .org-modal-header h2 {
-          margin: 0 0 5px;
+          margin:
+            0 0 5px;
+
+          color:
+            var(--org-text);
+
           font-size: 20px;
         }
 
         .org-modal-header p {
           margin: 0;
-          color: #788294;
+
+          color:
+            var(--org-muted);
+
           font-size: 13px;
+
+          line-height: 1.45;
         }
 
         .org-close-button {
-          border: 0;
-          background: #f1f3f6;
-          color: #5c6677;
+          flex-shrink: 0;
+
+          border:
+            1px solid var(--org-border);
+
+          background:
+            var(--org-surface-3);
+
+          color:
+            var(--org-muted);
+
           width: 34px;
           height: 34px;
+
           border-radius: 8px;
+
           font-size: 23px;
+
           cursor: pointer;
+
           line-height: 1;
+
+          transition:
+            background-color .16s ease,
+            color .16s ease;
         }
+
+        .org-close-button:hover {
+          background:
+            var(--org-surface-2);
+
+          color:
+            var(--org-text);
+        }
+
+        /* ============================================================
+           FORM
+           ============================================================ */
 
         .org-form {
           padding: 22px;
@@ -1210,7 +2567,10 @@ const Organization = () => {
 
         .org-form-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+
+          grid-template-columns:
+            1fr 1fr;
+
           gap: 15px;
         }
 
@@ -1220,9 +2580,14 @@ const Organization = () => {
 
         .org-field label {
           display: block;
+
           margin-bottom: 7px;
-          color: #39445a;
+
+          color:
+            var(--org-text-secondary);
+
           font-size: 13px;
+
           font-weight: 650;
         }
 
@@ -1230,55 +2595,145 @@ const Organization = () => {
         .org-field select,
         .org-field textarea {
           width: 100%;
+
           box-sizing: border-box;
-          border: 1px solid #dce1e9;
+
+          border:
+            1px solid var(--org-border-strong);
+
           border-radius: 8px;
-          padding: 11px 12px;
-          background: white;
-          color: #202b3d;
+
+          padding:
+            11px 12px;
+
+          background:
+            var(--org-surface);
+
+          color:
+            var(--org-text);
+
           font-size: 14px;
+
           outline: none;
+
           font-family: inherit;
+
+          transition:
+            border-color .16s ease,
+            box-shadow .16s ease,
+            background-color .16s ease;
+        }
+
+        .org-field input::placeholder,
+        .org-field textarea::placeholder {
+          color:
+            var(--org-muted);
+
+          opacity: .8;
+        }
+
+        .org-field select {
+          cursor: pointer;
+        }
+
+        .organization-dark
+        .org-field select option {
+          background:
+            var(--org-surface);
+
+          color:
+            var(--org-text);
         }
 
         .org-field textarea {
           resize: vertical;
+
+          min-height: 105px;
         }
 
         .org-field input:focus,
         .org-field select:focus,
         .org-field textarea:focus {
-          border-color: #6d82df;
-          box-shadow: 0 0 0 3px rgba(49,87,213,.08);
+          border-color:
+            var(--org-primary);
+
+          box-shadow:
+            0 0 0 3px
+            rgba(49, 87, 213, .12);
         }
+
+        .organization-dark
+        .org-field input:focus,
+        .organization-dark
+        .org-field select:focus,
+        .organization-dark
+        .org-field textarea:focus {
+          box-shadow:
+            0 0 0 3px
+            rgba(99, 102, 241, .16);
+        }
+
+        /* ============================================================
+           CHECKBOX
+           ============================================================ */
 
         .org-checkbox {
           display: flex;
+
           align-items: center;
+
           gap: 9px;
-          height: 42px;
+
+          min-height: 42px;
+
           margin-top: 20px;
-          color: #424d61;
+
+          color:
+            var(--org-text-secondary);
+
           font-size: 13px;
+
           font-weight: 600;
+
           cursor: pointer;
         }
 
         .org-checkbox input {
           width: 17px;
           height: 17px;
-          accent-color: #3157d5;
+
+          margin: 0;
+
+          accent-color:
+            var(--org-primary);
+
+          cursor: pointer;
         }
+
+        /* ============================================================
+           MODAL ACTIONS
+           ============================================================ */
 
         .org-modal-actions {
           display: flex;
-          justify-content: flex-end;
+
+          justify-content:
+            flex-end;
+
           gap: 9px;
+
           padding-top: 8px;
-          border-top: 1px solid #edf0f4;
+
+          border-top:
+            1px solid var(--org-border);
         }
 
+        /* ============================================================
+           MOBILE
+           ============================================================ */
+
         @media (max-width: 800px) {
+
           .organization-page {
             padding: 18px;
           }
@@ -1299,38 +2754,152 @@ const Organization = () => {
             grid-template-columns: 1fr;
           }
 
+          .org-modal-backdrop {
+            align-items: flex-start;
+
+            padding:
+              12px;
+          }
+
+          .org-modal {
+            max-height:
+              calc(100vh - 24px);
+
+            border-radius:
+              12px;
+          }
+
+          .org-modal-header {
+            padding:
+              18px;
+          }
+
+          .org-form {
+            padding:
+              18px;
+          }
+
+        }
+
+        @media (max-width: 480px) {
+
+          .organization-page {
+            padding:
+              14px 10px 25px;
+          }
+
+          .org-header {
+            gap: 14px;
+
+            margin-bottom: 18px;
+          }
+
+          .org-header h1 {
+            font-size: 22px;
+          }
+
+          .org-header p {
+            font-size: 13px;
+          }
+
+          .org-stat {
+            padding:
+              15px;
+          }
+
           .org-tabs {
-            overflow-x: auto;
+            margin-bottom:
+              14px;
           }
 
           .org-tab {
-            min-width: 120px;
+            min-width:
+              105px;
+
+            padding:
+              10px 12px;
+
+            font-size: 13px;
           }
+
+          .org-panel-header {
+            padding:
+              16px;
+          }
+
+          .org-modal-actions {
+            flex-direction:
+              column-reverse;
+          }
+
+          .org-modal-actions
+          .org-button {
+            width: 100%;
+          }
+
         }
+
+        /* ============================================================
+           REDUCED MOTION
+           ============================================================ */
+
+        @media (prefers-reduced-motion: reduce) {
+
+          .organization-page *,
+          .organization-page *::before,
+          .organization-page *::after {
+            transition:
+              none !important;
+          }
+
+        }
+
       `}</style>
 
       <div className="org-container">
+
+        {/* ==========================================================
+            HEADER
+            ========================================================== */}
+
         <div className="org-header">
           <div>
-            <h1>Organization</h1>
+            <h1>
+              {translate(
+                "organization",
+                "Organization",
+                "Umuryango"
+              )}
+            </h1>
+
             <p>
-              Manage ANTIMATE departments, positions and
-              teams.
+              {translate(
+                "organizationDescription",
+                "Manage ANTIMATE departments, positions and teams.",
+                "Gucunga departments, positions na teams bya ANTIMATE."
+              )}
             </p>
           </div>
 
           <button
             className="org-button primary"
-            onClick={openCreateModal}
+            onClick={
+              openCreateModal
+            }
           >
-            + Add{" "}
-            {activeTab === "departments"
-              ? "Department"
-              : activeTab === "positions"
-              ? "Position"
-              : "Team"}
+            +{" "}
+            {translate(
+              "add",
+              "Add",
+              "Ongeramo"
+            )}{" "}
+            {activeEntityLabel}
           </button>
         </div>
+
+        {/* ==========================================================
+            MESSAGES
+            ========================================================== */}
 
         {message && (
           <div className="org-alert org-alert-success">
@@ -1338,149 +2907,277 @@ const Organization = () => {
           </div>
         )}
 
-        {error && !showModal && (
-          <div className="org-alert org-alert-error">
-            {error}
-          </div>
-        )}
+        {error &&
+          !showModal && (
+            <div className="org-alert org-alert-error">
+              {error}
+            </div>
+          )}
+
+        {/* ==========================================================
+            STATS
+            ========================================================== */}
 
         <div className="org-stats">
+
           <div className="org-stat">
             <div className="org-stat-label">
-              Active Departments
+              {translate(
+                "activeDepartments",
+                "Active Departments",
+                "Departments zikora"
+              )}
             </div>
 
             <div className="org-stat-value">
-              {activeDepartments.length}
+              {
+                activeDepartments.length
+              }
             </div>
           </div>
 
           <div className="org-stat">
             <div className="org-stat-label">
-              Active Positions
+              {translate(
+                "activePositions",
+                "Active Positions",
+                "Positions zikora"
+              )}
             </div>
 
             <div className="org-stat-value">
-              {activePositions.length}
+              {
+                activePositions.length
+              }
             </div>
           </div>
 
           <div className="org-stat">
             <div className="org-stat-label">
-              Active Teams
+              {translate(
+                "activeTeams",
+                "Active Teams",
+                "Teams zikora"
+              )}
             </div>
 
             <div className="org-stat-value">
               {activeTeams.length}
             </div>
           </div>
+
         </div>
+
+        {/* ==========================================================
+            TABS
+            ========================================================== */}
 
         <div className="org-tabs">
+
           <button
             className={`org-tab ${
-              activeTab === "departments"
+              activeTab ===
+              "departments"
                 ? "active"
                 : ""
             }`}
             onClick={() => {
-              setActiveTab("departments");
+              setActiveTab(
+                "departments"
+              );
+
               clearMessages();
             }}
           >
-            Departments
+            {translate(
+              "departments",
+              "Departments",
+              "Departments"
+            )}
           </button>
 
           <button
             className={`org-tab ${
-              activeTab === "positions"
+              activeTab ===
+              "positions"
                 ? "active"
                 : ""
             }`}
             onClick={() => {
-              setActiveTab("positions");
+              setActiveTab(
+                "positions"
+              );
+
               clearMessages();
             }}
           >
-            Positions
+            {translate(
+              "positions",
+              "Positions",
+              "Positions"
+            )}
           </button>
 
           <button
             className={`org-tab ${
-              activeTab === "teams" ? "active" : ""
+              activeTab === "teams"
+                ? "active"
+                : ""
             }`}
             onClick={() => {
-              setActiveTab("teams");
+              setActiveTab(
+                "teams"
+              );
+
               clearMessages();
             }}
           >
-            Teams
+            {translate(
+              "teams",
+              "Teams",
+              "Teams"
+            )}
           </button>
+
         </div>
 
+        {/* ==========================================================
+            PANEL
+            ========================================================== */}
+
         <div className="org-panel">
+
           <div className="org-panel-header">
+
             <div>
+
               <h2>
-                {activeTab === "departments"
-                  ? "Departments"
-                  : activeTab === "positions"
-                  ? "Positions"
-                  : "Teams"}
+                {activePluralLabel}
               </h2>
 
               <p>
-                {activeTab === "departments"
-                  ? `${departments.length} departments configured`
-                  : activeTab === "positions"
-                  ? `${positions.length} positions configured`
-                  : `${teams.length} teams configured`}
+                {translate(
+                  "configuredCount",
+                  `${activeCount} ${activePluralLabel.toLowerCase()} configured`,
+                  `${activeCount} ${activePluralLabel.toLowerCase()} zateguwe`
+                )}
               </p>
+
             </div>
+
           </div>
+
+          {/* ========================================================
+              LOADING
+              ======================================================== */}
 
           {loading ? (
             <div className="org-loading">
-              Loading organization...
+              {translate(
+                "loadingOrganization",
+                "Loading organization...",
+                "Birimo kubika imiterere y'umuryango..."
+              )}
             </div>
-          ) : activeTab === "departments" ? (
-            departments.length === 0 ? (
+          ) : activeTab ===
+            "departments" ? (
+
+            /* ======================================================
+               DEPARTMENTS
+               ====================================================== */
+
+            departments.length ===
+            0 ? (
               <div className="org-empty">
-                No departments found.
+                {translate(
+                  "noDepartments",
+                  "No departments found.",
+                  "Nta departments zabonetse."
+                )}
               </div>
             ) : (
               <div className="org-table-wrap">
+
                 <table className="org-table">
+
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Code</th>
-                      <th>Description</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th>
+                        {translate(
+                          "name",
+                          "Name",
+                          "Izina"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "code",
+                          "Code",
+                          "Code"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "description",
+                          "Description",
+                          "Ibisobanuro"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "status",
+                          "Status",
+                          "Imimerere"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "actions",
+                          "Actions",
+                          "Ibikorwa"
+                        )}
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
+
                     {departments.map(
-                      (department) => (
-                        <tr key={department._id}>
+                      (
+                        department
+                      ) => (
+                        <tr
+                          key={
+                            department._id
+                          }
+                        >
+
                           <td>
                             <div className="org-name">
-                              {department.name}
+                              {
+                                department.name
+                              }
                             </div>
                           </td>
 
                           <td>
                             <span className="org-code">
-                              {department.code}
+                              {
+                                department.code
+                              }
                             </span>
                           </td>
 
                           <td>
                             <div className="org-description">
-                              {department.description ||
-                                "—"}
+                              {
+                                department.description ||
+                                "—"
+                              }
                             </div>
                           </td>
 
@@ -1493,13 +3190,22 @@ const Organization = () => {
                               }`}
                             >
                               {department.active
-                                ? "Active"
-                                : "Inactive"}
+                                ? translate(
+                                    "active",
+                                    "Active",
+                                    "Irakora"
+                                  )
+                                : translate(
+                                    "inactive",
+                                    "Inactive",
+                                    "Ntirakora"
+                                  )}
                             </span>
                           </td>
 
                           <td>
                             <div className="org-actions">
+
                               <button
                                 className="org-action"
                                 onClick={() =>
@@ -1508,7 +3214,11 @@ const Organization = () => {
                                   )
                                 }
                               >
-                                Edit
+                                {translate(
+                                  "edit",
+                                  "Edit",
+                                  "Hindura"
+                                )}
                               </button>
 
                               <button
@@ -1519,194 +3229,397 @@ const Organization = () => {
                                   )
                                 }
                               >
-                                Delete
+                                {translate(
+                                  "delete",
+                                  "Delete",
+                                  "Siba"
+                                )}
                               </button>
+
                             </div>
                           </td>
+
                         </tr>
                       )
                     )}
+
                   </tbody>
+
                 </table>
+
               </div>
             )
-          ) : activeTab === "positions" ? (
-            positions.length === 0 ? (
+
+          ) : activeTab ===
+            "positions" ? (
+
+            /* ======================================================
+               POSITIONS
+               ====================================================== */
+
+            positions.length ===
+            0 ? (
               <div className="org-empty">
-                No positions found.
+                {translate(
+                  "noPositions",
+                  "No positions found.",
+                  "Nta positions zabonetse."
+                )}
               </div>
             ) : (
               <div className="org-table-wrap">
+
                 <table className="org-table">
+
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Code</th>
-                      <th>Department</th>
-                      <th>Level</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+
+                      <th>
+                        {translate(
+                          "name",
+                          "Name",
+                          "Izina"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "code",
+                          "Code",
+                          "Code"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "department",
+                          "Department",
+                          "Department"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "level",
+                          "Level",
+                          "Urwego"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "status",
+                          "Status",
+                          "Imimerere"
+                        )}
+                      </th>
+
+                      <th>
+                        {translate(
+                          "actions",
+                          "Actions",
+                          "Ibikorwa"
+                        )}
+                      </th>
+
                     </tr>
                   </thead>
 
                   <tbody>
-                    {positions.map((position) => (
-                      <tr key={position._id}>
+
+                    {positions.map(
+                      (
+                        position
+                      ) => (
+                        <tr
+                          key={
+                            position._id
+                          }
+                        >
+
+                          <td>
+                            <div className="org-name">
+                              {
+                                position.name
+                              }
+                            </div>
+                          </td>
+
+                          <td>
+                            <span className="org-code">
+                              {
+                                position.code
+                              }
+                            </span>
+                          </td>
+
+                          <td>
+                            {
+                              getDepartmentName(
+                                position.department
+                              )
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              getLevelLabel(
+                                position.level
+                              )
+                            }
+                          </td>
+
+                          <td>
+                            <span
+                              className={`org-status ${
+                                position.active
+                                  ? "active"
+                                  : "inactive"
+                              }`}
+                            >
+                              {position.active
+                                ? translate(
+                                    "active",
+                                    "Active",
+                                    "Irakora"
+                                  )
+                                : translate(
+                                    "inactive",
+                                    "Inactive",
+                                    "Ntirakora"
+                                  )}
+                            </span>
+                          </td>
+
+                          <td>
+                            <div className="org-actions">
+
+                              <button
+                                className="org-action"
+                                onClick={() =>
+                                  openEditPosition(
+                                    position
+                                  )
+                                }
+                              >
+                                {translate(
+                                  "edit",
+                                  "Edit",
+                                  "Hindura"
+                                )}
+                              </button>
+
+                              <button
+                                className="org-action delete"
+                                onClick={() =>
+                                  deletePosition(
+                                    position
+                                  )
+                                }
+                              >
+                                {translate(
+                                  "delete",
+                                  "Delete",
+                                  "Siba"
+                                )}
+                              </button>
+
+                            </div>
+                          </td>
+
+                        </tr>
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            )
+
+          ) : teams.length ===
+            0 ? (
+
+            /* ======================================================
+               EMPTY TEAMS
+               ====================================================== */
+
+            <div className="org-empty">
+              {translate(
+                "noTeams",
+                "No teams found.",
+                "Nta teams zabonetse."
+              )}
+            </div>
+
+          ) : (
+
+            /* ======================================================
+               TEAMS
+               ====================================================== */
+
+            <div className="org-table-wrap">
+
+              <table className="org-table">
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      {translate(
+                        "name",
+                        "Name",
+                        "Izina"
+                      )}
+                    </th>
+
+                    <th>
+                      {translate(
+                        "code",
+                        "Code",
+                        "Code"
+                      )}
+                    </th>
+
+                    <th>
+                      {translate(
+                        "department",
+                        "Department",
+                        "Department"
+                      )}
+                    </th>
+
+                    <th>
+                      {translate(
+                        "status",
+                        "Status",
+                        "Imimerere"
+                      )}
+                    </th>
+
+                    <th>
+                      {translate(
+                        "actions",
+                        "Actions",
+                        "Ibikorwa"
+                      )}
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {teams.map(
+                    (team) => (
+                      <tr
+                        key={
+                          team._id
+                        }
+                      >
+
                         <td>
                           <div className="org-name">
-                            {position.name}
+                            {
+                              team.name
+                            }
                           </div>
                         </td>
 
                         <td>
                           <span className="org-code">
-                            {position.code}
+                            {
+                              team.code
+                            }
                           </span>
                         </td>
 
                         <td>
-                          {getDepartmentName(
-                            position.department
-                          )}
-                        </td>
-
-                        <td>
-                          {position.level
-                            ? position.level
-                                .charAt(0)
-                                .toUpperCase() +
-                              position.level.slice(1)
-                            : "—"}
+                          {
+                            getDepartmentName(
+                              team.department
+                            )
+                          }
                         </td>
 
                         <td>
                           <span
                             className={`org-status ${
-                              position.active
+                              team.active
                                 ? "active"
                                 : "inactive"
                             }`}
                           >
-                            {position.active
-                              ? "Active"
-                              : "Inactive"}
+                            {team.active
+                              ? translate(
+                                  "active",
+                                  "Active",
+                                  "Irakora"
+                                )
+                              : translate(
+                                  "inactive",
+                                  "Inactive",
+                                  "Ntirakora"
+                                )}
                           </span>
                         </td>
 
                         <td>
                           <div className="org-actions">
+
                             <button
                               className="org-action"
                               onClick={() =>
-                                openEditPosition(
-                                  position
+                                openEditTeam(
+                                  team
                                 )
                               }
                             >
-                              Edit
+                              {translate(
+                                "edit",
+                                "Edit",
+                                "Hindura"
+                              )}
                             </button>
 
                             <button
                               className="org-action delete"
                               onClick={() =>
-                                deletePosition(
-                                  position
+                                deleteTeam(
+                                  team
                                 )
                               }
                             >
-                              Delete
+                              {translate(
+                                "delete",
+                                "Delete",
+                                "Siba"
+                              )}
                             </button>
+
                           </div>
                         </td>
+
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          ) : teams.length === 0 ? (
-            <div className="org-empty">
-              No teams found.
-            </div>
-          ) : (
-            <div className="org-table-wrap">
-              <table className="org-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Code</th>
-                    <th>Department</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
+                    )
+                  )}
 
-                <tbody>
-                  {teams.map((team) => (
-                    <tr key={team._id}>
-                      <td>
-                        <div className="org-name">
-                          {team.name}
-                        </div>
-                      </td>
-
-                      <td>
-                        <span className="org-code">
-                          {team.code}
-                        </span>
-                      </td>
-
-                      <td>
-                        {getDepartmentName(
-                          team.department
-                        )}
-                      </td>
-
-                      <td>
-                        <span
-                          className={`org-status ${
-                            team.active
-                              ? "active"
-                              : "inactive"
-                          }`}
-                        >
-                          {team.active
-                            ? "Active"
-                            : "Inactive"}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="org-actions">
-                          <button
-                            className="org-action"
-                            onClick={() =>
-                              openEditTeam(team)
-                            }
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            className="org-action delete"
-                            onClick={() =>
-                              deleteTeam(team)
-                            }
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
                 </tbody>
+
               </table>
+
             </div>
           )}
+
         </div>
+
       </div>
 
       {renderModal()}
+
     </div>
   );
 };
