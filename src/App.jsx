@@ -19,6 +19,8 @@ import Settings from "./pages/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
 import Organization from "./pages/Organization";
+import Reports from "./pages/Reports";
+import CreateReport from "./pages/CreateReport";
 
 function Protected({
   children,
@@ -157,6 +159,24 @@ export default function App() {
               </Protected>
             }
           />
+
+          <Route
+  path="/reports"
+  element={
+    <Protected permission="reports.view">
+      <Reports />
+    </Protected>
+  }
+/>
+
+<Route
+  path="/reports/create"
+  element={
+    <Protected permission="reports.create">
+      <CreateReport />
+    </Protected>
+  }
+/>
 
           {/* ==================================================
               SETTINGS

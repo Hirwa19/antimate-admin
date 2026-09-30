@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Radio,
   Building2,
+  FileText,
 } from "lucide-react";
 
 import {
@@ -111,6 +112,16 @@ export default function Sidebar() {
       path: "/organization",
       icon: Building2,
       permission: "organization.view",
+    },
+
+    {
+      label: translate(
+        "reports",
+        "Reports"
+      ),
+      path: "/reports",
+      icon: FileText,
+      permission: "reports.view",
     },
 
     {
