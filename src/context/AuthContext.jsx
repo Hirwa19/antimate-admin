@@ -6,18 +6,17 @@ import {
   useCallback,
 } from "react";
 
-const AuthContext = createContext();
+import api from "../api/axios";
 
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://brooder-backend.onrender.com/api";
+const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [admin, setAdmin] = useState(null);
   const [token, setToken] = useState(null);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsLoading, setPermissionsLoading] =
+    useState(false);
 
   /*
   ============================================================
@@ -26,31 +25,48 @@ export function AuthProvider({ children }) {
   */
 
   useEffect(() => {
-    const savedAdmin = localStorage.getItem("admin");
-    const savedToken = localStorage.getItem("token");
+    const savedAdmin =
+      localStorage.getItem("admin");
+
+    const savedToken =
+      localStorage.getItem("token");
+
     const savedPermissions =
       localStorage.getItem("permissions");
 
     if (savedAdmin && savedToken) {
       try {
-        const parsedAdmin = JSON.parse(savedAdmin);
+        const parsedAdmin =
+          JSON.parse(savedAdmin);
 
         setAdmin(parsedAdmin);
         setToken(savedToken);
 
         if (savedPermissions) {
           try {
-            setPermissions(JSON.parse(savedPermissions));
+            const parsedPermissions =
+              JSON.parse(savedPermissions);
+
+            setPermissions(
+              Array.isArray(parsedPermissions)
+                ? parsedPermissions
+                : []
+            );
           } catch {
             setPermissions([]);
           }
         }
       } catch (error) {
-        console.error("FAILED TO LOAD SAVED ADMIN:", error);
+        console.error(
+          "FAILED TO LOAD SAVED ADMIN:",
+          error
+        );
 
         localStorage.removeItem("admin");
         localStorage.removeItem("token");
-        localStorage.removeItem("permissions");
+        localStorage.removeItem(
+          "permissions"
+        );
       }
     }
 
@@ -73,36 +89,43 @@ export function AuthProvider({ children }) {
       setPermissionsLoading(true);
 
       try {
-        const response = await fetch(
-          `${API_URL}/access-control/me`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${jwtToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        /*
+        api/axios.js automatically adds:
 
-        const data = await response.json();
+        Authorization: Bearer <token>
 
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              "Failed to load access permissions"
+        and uses:
+
+        VITE_API_URL + /api
+        */
+
+        const response =
+          await api.get(
+            "/access-control/me",
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${jwtToken}`,
+              },
+            }
           );
-        }
+
+        const data = response.data;
 
         const user = data?.user;
         const access = data?.access;
 
         const loadedPermissions =
-          Array.isArray(access?.permissions)
+          Array.isArray(
+            access?.permissions
+          )
             ? access.permissions
             : [];
 
         /*
-        Update admin with the latest backend data.
+        ========================================================
+        UPDATE CURRENT ADMIN
+        ========================================================
         */
 
         if (user) {
@@ -114,11 +137,21 @@ export function AuthProvider({ children }) {
           );
         }
 
-        setPermissions(loadedPermissions);
+        /*
+        ========================================================
+        SAVE PERMISSIONS
+        ========================================================
+        */
+
+        setPermissions(
+          loadedPermissions
+        );
 
         localStorage.setItem(
           "permissions",
-          JSON.stringify(loadedPermissions)
+          JSON.stringify(
+            loadedPermissions
+          )
         );
       } catch (error) {
         console.error(
@@ -127,10 +160,10 @@ export function AuthProvider({ children }) {
         );
 
         /*
-        Do not immediately logout here.
+        Do not immediately logout.
 
-        If Render/backend is temporarily waking up,
-        the saved login can remain available.
+        If Render is waking up or temporarily
+        unavailable, keep the saved login.
         */
 
         setPermissions([]);
@@ -151,7 +184,10 @@ export function AuthProvider({ children }) {
     if (token) {
       loadPermissions(token);
     }
-  }, [token, loadPermissions]);
+  }, [
+    token,
+    loadPermissions,
+  ]);
 
   /*
   ============================================================
@@ -159,12 +195,10 @@ export function AuthProvider({ children }) {
   ============================================================
   */
 
-  const login = (adminData, jwtToken) => {
-    console.log(
-      "AUTH LOGIN DATA:",
-      adminData
-    );
-
+  const login = (
+    adminData,
+    jwtToken
+  ) => {
     localStorage.setItem(
       "admin",
       JSON.stringify(adminData)
@@ -175,14 +209,16 @@ export function AuthProvider({ children }) {
       jwtToken
     );
 
-    localStorage.removeItem("permissions");
+    localStorage.removeItem(
+      "permissions"
+    );
 
     setAdmin(adminData);
     setToken(jwtToken);
     setPermissions([]);
 
     /*
-    Load permissions immediately after login.
+    Load permissions immediately.
     */
 
     loadPermissions(jwtToken);
@@ -197,7 +233,9 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem("admin");
     localStorage.removeItem("token");
-    localStorage.removeItem("permissions");
+    localStorage.removeItem(
+      "permissions"
+    );
 
     setAdmin(null);
     setToken(null);
@@ -217,14 +255,18 @@ export function AuthProvider({ children }) {
       }
 
       /*
-      Superadmin / wildcard permission.
+      Wildcard gives full access.
       */
 
-      if (permissions.includes("*")) {
+      if (
+        permissions.includes("*")
+      ) {
         return true;
       }
 
-      return permissions.includes(permission);
+      return permissions.includes(
+        permission
+      );
     },
     [permissions]
   );
@@ -235,23 +277,30 @@ export function AuthProvider({ children }) {
   ============================================================
   */
 
-  const hasAnyPermission = useCallback(
-    (...requiredPermissions) => {
-      if (!requiredPermissions.length) {
-        return false;
-      }
+  const hasAnyPermission =
+    useCallback(
+      (...requiredPermissions) => {
+        if (
+          !requiredPermissions.length
+        ) {
+          return false;
+        }
 
-      if (permissions.includes("*")) {
-        return true;
-      }
+        if (
+          permissions.includes("*")
+        ) {
+          return true;
+        }
 
-      return requiredPermissions.some(
-        (permission) =>
-          permissions.includes(permission)
-      );
-    },
-    [permissions]
-  );
+        return requiredPermissions.some(
+          (permission) =>
+            permissions.includes(
+              permission
+            )
+        );
+      },
+      [permissions]
+    );
 
   /*
   ============================================================
@@ -259,23 +308,30 @@ export function AuthProvider({ children }) {
   ============================================================
   */
 
-  const hasAllPermissions = useCallback(
-    (...requiredPermissions) => {
-      if (!requiredPermissions.length) {
-        return false;
-      }
+  const hasAllPermissions =
+    useCallback(
+      (...requiredPermissions) => {
+        if (
+          !requiredPermissions.length
+        ) {
+          return false;
+        }
 
-      if (permissions.includes("*")) {
-        return true;
-      }
+        if (
+          permissions.includes("*")
+        ) {
+          return true;
+        }
 
-      return requiredPermissions.every(
-        (permission) =>
-          permissions.includes(permission)
-      );
-    },
-    [permissions]
-  );
+        return requiredPermissions.every(
+          (permission) =>
+            permissions.includes(
+              permission
+            )
+        );
+      },
+      [permissions]
+    );
 
   /*
   ============================================================
@@ -284,7 +340,8 @@ export function AuthProvider({ children }) {
   */
 
   const accessLevel =
-    admin?.accessLevel || "limited";
+    admin?.accessLevel ||
+    "limited";
 
   /*
   ============================================================
@@ -320,5 +377,7 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  return useContext(
+    AuthContext
+  );
 }
