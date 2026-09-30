@@ -82,12 +82,12 @@ export default function App() {
             }
           />
 
-         <Route
+      <Route
   path="/workers/create"
   element={
-    <ProtectedRoute>
+    <Protected>
       <CreateEmployee />
-    </ProtectedRoute>
+    </Protected>
   }
 />
           <Route
