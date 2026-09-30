@@ -52,15 +52,13 @@ export default function CreateWorker() {
   const [countdown, setCountdown] = useState(0);
 
   const roles = useMemo(
-    () => [
-      "Admin",
-      "Manager",
-      "Technician",
-      "Support",
-      "Worker",
-    ],
-    []
-  );
+  () => [
+    "Admin",
+    "Technician",
+    "Worker",
+  ],
+  []
+);
 
   /* ============================================================
      OTP COUNTDOWN
