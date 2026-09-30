@@ -6,7 +6,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Workers from "./pages/Workers";
 import Devices from "./pages/Devices";
-import CreateWorker from "./pages/CreateWorker";;
+import CreateWorker from "./pages/CreateWorker";
 import GenerateDevice from "./pages/GenerateDevice";
 import GenerateGateway from "./pages/GenerateGateway";
 import Settings from "./pages/Settings";
