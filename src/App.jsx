@@ -1,4 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 import { AppSettingsProvider } from "./context/AppSettingsContext";
 
@@ -15,9 +20,18 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
 import Organization from "./pages/Organization";
 
-function Protected({ children }) {
+function Protected({
+  children,
+  permission,
+  anyPermissions = [],
+  allPermissions = [],
+}) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute
+      permission={permission}
+      anyPermissions={anyPermissions}
+      allPermissions={allPermissions}
+    >
       <AppLayout>
         {children}
       </AppLayout>
@@ -29,93 +43,137 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppSettingsProvider>
-
         <Routes>
+
+          {/* ==================================================
+              LOGIN
+          ================================================== */}
 
           <Route
             path="/login"
             element={<Login />}
           />
 
-          <Route
-  path="/access-control"
-  element={
-    <ProtectedRoute>
-      <AccessControl />
-    </ProtectedRoute>
-  }
-/>
+          {/* ==================================================
+              DASHBOARD
+          ================================================== */}
 
           <Route
             path="/dashboard"
             element={
-              <Protected>
+              <Protected permission="dashboard.view">
                 <Dashboard />
               </Protected>
             }
           />
 
+          {/* ==================================================
+              DEVICES
+          ================================================== */}
+
           <Route
             path="/devices"
             element={
-              <Protected>
+              <Protected permission="devices.view">
                 <Devices />
               </Protected>
             }
           />
 
+          {/* ==================================================
+              GENERATE DEVICE
+          ================================================== */}
+
           <Route
             path="/generate-device"
             element={
-              <Protected>
+              <Protected permission="devices.create">
                 <GenerateDevice />
               </Protected>
             }
           />
 
+          {/* ==================================================
+              GENERATE GATEWAY
+          ================================================== */}
+
           <Route
             path="/generate-gateway"
             element={
-              <Protected>
+              <Protected permission="gateways.create">
                 <GenerateGateway />
               </Protected>
             }
           />
 
+          {/* ==================================================
+              WORKERS
+          ================================================== */}
+
           <Route
             path="/workers"
             element={
-              <Protected>
+              <Protected permission="workers.view">
                 <Workers />
               </Protected>
             }
           />
 
-      <Route
-  path="/workers/create"
-  element={
-    <Protected>
-      <CreateEmployee />
-    </Protected>
-  }
-/>
+          {/* ==================================================
+              CREATE WORKER
+          ================================================== */}
+
           <Route
-  path="/organization"
-  element={
-    <ProtectedRoute>
-      <Organization />
-    </ProtectedRoute>
-  }
-/>
+            path="/workers/create"
+            element={
+              <Protected permission="workers.create">
+                <CreateEmployee />
+              </Protected>
+            }
+          />
+
+          {/* ==================================================
+              ORGANIZATION
+          ================================================== */}
+
+          <Route
+            path="/organization"
+            element={
+              <Protected permission="organization.view">
+                <Organization />
+              </Protected>
+            }
+          />
+
+          {/* ==================================================
+              ACCESS CONTROL
+          ================================================== */}
+
+          <Route
+            path="/access-control"
+            element={
+              <Protected permission="access_control.view">
+                <AccessControl />
+              </Protected>
+            }
+          />
+
+          {/* ==================================================
+              SETTINGS
+          ================================================== */}
 
           <Route
             path="/settings"
             element={
-              <Protected>
+              <Protected permission="settings.view">
                 <Settings />
               </Protected>
             }
           />
+
+          {/* ==================================================
+              DEFAULT
+          ================================================== */}
 
           <Route
             path="/"
@@ -126,6 +184,10 @@ export default function App() {
               />
             }
           />
+
+          {/* ==================================================
+              UNKNOWN ROUTES
+          ================================================== */}
 
           <Route
             path="*"
@@ -138,7 +200,6 @@ export default function App() {
           />
 
         </Routes>
-
       </AppSettingsProvider>
     </BrowserRouter>
   );

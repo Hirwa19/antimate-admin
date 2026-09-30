@@ -1,35 +1,131 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+export default function ProtectedRoute({
+  children,
+  permission,
+  anyPermissions = [],
+  allPermissions = [],
+}) {
+  const location = useLocation();
 
-export default function ProtectedRoute({children}){
+  const {
+    admin,
+    loading,
+    permissionsLoading,
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
+  } = useAuth();
 
+  /*
+  ============================================================
+  AUTH LOADING
+  ============================================================
+  */
 
-const {admin,loading}=useAuth();
+  if (loading) {
+    return (
+      <div className="protected-route-loading">
+        Loading...
+      </div>
+    );
+  }
 
+  /*
+  ============================================================
+  NOT LOGGED IN
+  ============================================================
+  */
 
+  if (!admin) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          from: location.pathname,
+        }}
+      />
+    );
+  }
 
-if(loading){
+  /*
+  ============================================================
+  PERMISSIONS LOADING
+  ============================================================
+  */
 
-return (
-<div>
-Loading...
-</div>
-);
+  if (
+    permission ||
+    anyPermissions.length > 0 ||
+    allPermissions.length > 0
+  ) {
+    if (permissionsLoading) {
+      return (
+        <div className="protected-route-loading">
+          Loading access...
+        </div>
+      );
+    }
+  }
 
-}
+  /*
+  ============================================================
+  SINGLE PERMISSION
+  ============================================================
+  */
 
+  if (permission && !hasPermission(permission)) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
+  }
 
+  /*
+  ============================================================
+  ANY PERMISSION
+  ============================================================
+  */
 
-if(!admin){
+  if (
+    anyPermissions.length > 0 &&
+    !hasAnyPermission(...anyPermissions)
+  ) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
+  }
 
-return <Navigate to="/login"/>;
+  /*
+  ============================================================
+  ALL PERMISSIONS
+  ============================================================
+  */
 
-}
+  if (
+    allPermissions.length > 0 &&
+    !hasAllPermissions(...allPermissions)
+  ) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
+  }
 
+  /*
+  ============================================================
+  ACCESS GRANTED
+  ============================================================
+  */
 
-
-return children;
-
-
+  return children;
 }
