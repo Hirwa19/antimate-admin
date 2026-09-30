@@ -44,6 +44,14 @@ export default function Workers() {
   const [success, setSuccess] = useState("");
 
   /* ============================================================
+     NAVIGATION
+  ============================================================ */
+
+  const goToCreateWorker = () => {
+    navigate("/workers/create");
+  };
+
+  /* ============================================================
      LOAD WORKERS
   ============================================================ */
 
@@ -60,18 +68,6 @@ export default function Workers() {
       const res = await api.get("/workers");
 
       console.log("WORKERS:", res.data);
-
-      /*
-       * Backend may return:
-       * [
-       *   ...
-       * ]
-       *
-       * or:
-       * {
-       *   workers: [...]
-       * }
-       */
 
       const data = Array.isArray(res.data)
         ? res.data
@@ -247,13 +243,6 @@ export default function Workers() {
   ============================================================ */
 
   const getWorkerStatus = (worker) => {
-    /*
-     * Supports several possible backend fields:
-     * active
-     * isActive
-     * status
-     */
-
     if (
       worker?.active === false ||
       worker?.isActive === false ||
@@ -306,9 +295,7 @@ export default function Workers() {
             <Users size={14} />
 
             <span>
-              {isRw
-                ? "Administration"
-                : "Administration"}
+              Administration
             </span>
 
             <span>/</span>
@@ -321,9 +308,7 @@ export default function Workers() {
           </div>
 
           <h1>
-            {isRw
-              ? "ANTIMATE Staff"
-              : "ANTIMATE Staff"}
+            ANTIMATE Staff
           </h1>
 
           <p>
@@ -352,18 +337,14 @@ export default function Workers() {
             />
 
             <span>
-              {isRw
-                ? "Refresh"
-                : "Refresh"}
+              Refresh
             </span>
           </button>
 
           <button
             type="button"
-            className="workers-create-button"
-            onClick={() =>
-              navigate("/create-worker")
-            }
+            className="workers-add-button"
+            onClick={goToCreateWorker}
           >
             <UserPlus size={17} />
 
@@ -377,7 +358,6 @@ export default function Workers() {
         </div>
 
       </header>
-
 
       {/* ======================================================
           ALERTS
@@ -400,7 +380,6 @@ export default function Workers() {
         </div>
       )}
 
-
       {success && (
         <div className="workers-alert workers-alert-success">
 
@@ -417,7 +396,6 @@ export default function Workers() {
 
         </div>
       )}
-
 
       {/* ======================================================
           SUMMARY
@@ -444,9 +422,7 @@ export default function Workers() {
 
           </div>
 
-
           <div className="workers-summary-divider" />
-
 
           <div className="workers-summary-item">
 
@@ -466,9 +442,7 @@ export default function Workers() {
 
           </div>
 
-
           <div className="workers-summary-divider" />
-
 
           <div className="workers-summary-item">
 
@@ -497,7 +471,6 @@ export default function Workers() {
 
         </div>
       )}
-
 
       {/* ======================================================
           TOOLBAR
@@ -538,13 +511,10 @@ export default function Workers() {
 
           </div>
 
-
           <div className="workers-select-group">
 
             <label>
-              {isRw
-                ? "Role"
-                : "Role"}
+              Role
             </label>
 
             <div className="workers-select-wrapper">
@@ -579,7 +549,6 @@ export default function Workers() {
 
           </div>
 
-
           <div className="workers-select-group">
 
             <label>
@@ -605,15 +574,11 @@ export default function Workers() {
                 </option>
 
                 <option value="role">
-                  {isRw
-                    ? "Role"
-                    : "Role"}
+                  Role
                 </option>
 
                 <option value="email">
-                  {isRw
-                    ? "Email"
-                    : "Email"}
+                  Email
                 </option>
               </select>
 
@@ -625,7 +590,6 @@ export default function Workers() {
 
         </div>
       )}
-
 
       {/* ======================================================
           RESULT COUNT
@@ -640,7 +604,6 @@ export default function Workers() {
 
         </div>
       )}
-
 
       {/* ======================================================
           LOADING
@@ -669,7 +632,6 @@ export default function Workers() {
         </section>
       )}
 
-
       {/* ======================================================
           WORKER LIST
       ====================================================== */}
@@ -688,31 +650,22 @@ export default function Workers() {
               </span>
 
               <span>
-                {isRw
-                  ? "Contact"
-                  : "Contact"}
+                Contact
               </span>
 
               <span>
-                {isRw
-                  ? "Role"
-                  : "Role"}
+                Role
               </span>
 
               <span>
-                {isRw
-                  ? "Status"
-                  : "Status"}
+                Status
               </span>
 
               <span>
-                {isRw
-                  ? "Actions"
-                  : "Actions"}
+                Actions
               </span>
 
             </div>
-
 
             <div className="workers-list">
 
@@ -760,7 +713,6 @@ export default function Workers() {
 
                       </div>
 
-
                       {/* CONTACT */}
 
                       <div className="worker-contact">
@@ -787,7 +739,6 @@ export default function Workers() {
 
                       </div>
 
-
                       {/* ROLE */}
 
                       <div className="worker-role">
@@ -799,7 +750,6 @@ export default function Workers() {
                         </span>
 
                       </div>
-
 
                       {/* STATUS */}
 
@@ -826,7 +776,6 @@ export default function Workers() {
                         </span>
 
                       </div>
-
 
                       {/* ACTIONS */}
 
@@ -877,7 +826,6 @@ export default function Workers() {
           </section>
         )}
 
-
       {/* ======================================================
           NO SEARCH RESULTS
       ====================================================== */}
@@ -917,7 +865,6 @@ export default function Workers() {
           </section>
         )}
 
-
       {/* ======================================================
           EMPTY DATABASE
       ====================================================== */}
@@ -945,9 +892,7 @@ export default function Workers() {
 
             <button
               type="button"
-              onClick={() =>
-                navigate("/create-worker")
-              }
+              onClick={goToCreateWorker}
             >
               <UserPlus size={17} />
 
@@ -958,7 +903,6 @@ export default function Workers() {
 
           </section>
         )}
-
 
       {/* ======================================================
           WORKER DETAILS MODAL
@@ -982,6 +926,7 @@ export default function Workers() {
             <div className="workers-modal-header">
 
               <div>
+
                 <span className="workers-modal-eyebrow">
                   {isRw
                     ? "AMAKURU Y'UMUKOZI"
@@ -993,6 +938,7 @@ export default function Workers() {
                     selectedWorker
                   )}
                 </h2>
+
               </div>
 
               <button
@@ -1005,7 +951,6 @@ export default function Workers() {
               </button>
 
             </div>
-
 
             <div className="workers-modal-body">
 
@@ -1037,16 +982,11 @@ export default function Workers() {
 
               </div>
 
-
               <div className="workers-detail-list">
 
                 <DetailItem
                   icon={<Mail size={16} />}
-                  label={
-                    isRw
-                      ? "Email"
-                      : "Email"
-                  }
+                  label="Email"
                   value={getWorkerEmail(
                     selectedWorker
                   )}
@@ -1066,11 +1006,7 @@ export default function Workers() {
 
                 <DetailItem
                   icon={<Shield size={16} />}
-                  label={
-                    isRw
-                      ? "Role"
-                      : "Role"
-                  }
+                  label="Role"
                   value={getWorkerRole(
                     selectedWorker
                   )}
@@ -1078,11 +1014,7 @@ export default function Workers() {
 
                 <DetailItem
                   icon={<Users size={16} />}
-                  label={
-                    isRw
-                      ? "Status"
-                      : "Status"
-                  }
+                  label="Status"
                   value={
                     getWorkerStatus(
                       selectedWorker
@@ -1099,7 +1031,6 @@ export default function Workers() {
               </div>
 
             </div>
-
 
             <div className="workers-modal-footer">
 
@@ -1140,7 +1071,6 @@ export default function Workers() {
         </div>
       )}
 
-
       {/* ======================================================
           DELETE CONFIRMATION
       ====================================================== */}
@@ -1151,7 +1081,7 @@ export default function Workers() {
           onMouseDown={(event) => {
             if (
               event.target ===
-              event.currentTarget &&
+                event.currentTarget &&
               !deleting
             ) {
               setWorkerToDelete(null);
@@ -1233,7 +1163,6 @@ export default function Workers() {
         </div>
       )}
 
-
       {/* ======================================================
           CSS
       ====================================================== */}
@@ -1247,11 +1176,6 @@ export default function Workers() {
           padding: 4px 0 40px;
           color: var(--admin-text);
         }
-
-
-        /* =====================================================
-           HEADER
-        ===================================================== */
 
         .workers-header {
           display: flex;
@@ -1288,7 +1212,6 @@ export default function Workers() {
           font-size: 14px;
           line-height: 1.55;
         }
-
 
         .workers-header-actions {
           display: flex;
@@ -1342,11 +1265,6 @@ export default function Workers() {
           cursor: not-allowed;
         }
 
-
-        /* =====================================================
-           ALERT
-        ===================================================== */
-
         .workers-alert {
           min-height: 45px;
           display: flex;
@@ -1384,11 +1302,6 @@ export default function Workers() {
           background: rgba(69, 201, 130, .06);
           color: #55ca88;
         }
-
-
-        /* =====================================================
-           SUMMARY
-        ===================================================== */
 
         .workers-summary {
           display: flex;
@@ -1442,11 +1355,6 @@ export default function Workers() {
           border-radius: 50%;
           background: #4bc985;
         }
-
-
-        /* =====================================================
-           TOOLBAR
-        ===================================================== */
 
         .workers-toolbar {
           display: flex;
@@ -1539,21 +1447,11 @@ export default function Workers() {
           color: var(--admin-text-muted);
         }
 
-
-        /* =====================================================
-           RESULT COUNT
-        ===================================================== */
-
         .workers-result-count {
           margin: 0 0 8px;
           color: var(--admin-text-muted);
           font-size: 11px;
         }
-
-
-        /* =====================================================
-           LIST
-        ===================================================== */
 
         .workers-list-section {
           border: 1px solid var(--admin-border);
@@ -1602,11 +1500,6 @@ export default function Workers() {
           background: var(--admin-surface-subtle);
         }
 
-
-        /* =====================================================
-           WORKER
-        ===================================================== */
-
         .worker-main {
           min-width: 0;
           display: flex;
@@ -1651,11 +1544,6 @@ export default function Workers() {
           white-space: nowrap;
         }
 
-
-        /* =====================================================
-           CONTACT
-        ===================================================== */
-
         .worker-contact {
           min-width: 0;
           display: flex;
@@ -1678,11 +1566,6 @@ export default function Workers() {
           white-space: nowrap;
         }
 
-
-        /* =====================================================
-           ROLE
-        ===================================================== */
-
         .worker-role span {
           display: inline-flex;
           max-width: 100%;
@@ -1697,11 +1580,6 @@ export default function Workers() {
           text-overflow: ellipsis;
           white-space: nowrap;
         }
-
-
-        /* =====================================================
-           STATUS
-        ===================================================== */
 
         .worker-status {
           display: inline-flex;
@@ -1725,11 +1603,6 @@ export default function Workers() {
         .worker-status-inactive {
           color: var(--admin-text-muted);
         }
-
-
-        /* =====================================================
-           ACTIONS
-        ===================================================== */
 
         .worker-actions {
           display: flex;
@@ -1763,11 +1636,6 @@ export default function Workers() {
           border-color: #ef7777;
           color: #ef7777;
         }
-
-
-        /* =====================================================
-           EMPTY
-        ===================================================== */
 
         .workers-empty,
         .workers-loading {
@@ -1834,11 +1702,6 @@ export default function Workers() {
           font-weight: 700;
         }
 
-
-        /* =====================================================
-           LOADING
-        ===================================================== */
-
         .workers-loading {
           min-height: 270px;
           gap: 8px;
@@ -1854,11 +1717,6 @@ export default function Workers() {
           color: var(--admin-text-muted);
           font-size: 11px;
         }
-
-
-        /* =====================================================
-           MODAL
-        ===================================================== */
 
         .workers-modal-overlay {
           position: fixed;
@@ -2030,11 +1888,6 @@ export default function Workers() {
           color: #ef7777;
         }
 
-
-        /* =====================================================
-           DELETE CONFIRM
-        ===================================================== */
-
         .workers-confirm-modal {
           width: 100%;
           max-width: 420px;
@@ -2105,11 +1958,6 @@ export default function Workers() {
           cursor: not-allowed;
         }
 
-
-        /* =====================================================
-           ANIMATION
-        ===================================================== */
-
         .workers-spin {
           animation: workers-spin 1s linear infinite;
         }
@@ -2123,11 +1971,6 @@ export default function Workers() {
             transform: rotate(360deg);
           }
         }
-
-
-        /* =====================================================
-           RESPONSIVE
-        ===================================================== */
 
         @media (max-width: 1050px) {
 
@@ -2146,7 +1989,6 @@ export default function Workers() {
           }
 
         }
-
 
         @media (max-width: 850px) {
 
@@ -2174,7 +2016,6 @@ export default function Workers() {
           }
 
         }
-
 
         @media (max-width: 700px) {
 
@@ -2227,7 +2068,6 @@ export default function Workers() {
           }
 
         }
-
 
         @media (max-width: 480px) {
 
@@ -2295,7 +2135,6 @@ export default function Workers() {
   );
 }
 
-
 /* ============================================================
    DETAIL ITEM
 ============================================================ */
@@ -2313,6 +2152,7 @@ function DetailItem({
       </div>
 
       <div>
+
         <small>
           {label}
         </small>
@@ -2320,6 +2160,7 @@ function DetailItem({
         <strong>
           {value || "—"}
         </strong>
+
       </div>
 
     </div>
