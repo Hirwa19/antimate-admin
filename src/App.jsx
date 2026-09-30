@@ -90,7 +90,6 @@ export default function App() {
     </ProtectedRoute>
   }
 />
-
           <Route
   path="/organization"
   element={
