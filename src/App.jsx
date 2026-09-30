@@ -6,13 +6,14 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Workers from "./pages/Workers";
 import Devices from "./pages/Devices";
-import CreateWorker from "./pages/CreateWorker";
+import CreateEmployee from "./pages/CreateEmployee";
 import GenerateDevice from "./pages/GenerateDevice";
 import GenerateGateway from "./pages/GenerateGateway";
 import Settings from "./pages/Settings";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
+import Organization from "./pages/Organization";
 
 function Protected({ children }) {
   return (
@@ -81,14 +82,23 @@ export default function App() {
             }
           />
 
+         <Route
+  path="/workers/create"
+  element={
+    <ProtectedRoute>
+      <CreateEmployee />
+    </ProtectedRoute>
+  }
+/>
+
           <Route
-            path="/workers/create"
-            element={
-              <Protected>
-                <CreateWorker />
-              </Protected>
-            }
-          />
+  path="/organization"
+  element={
+    <ProtectedRoute>
+      <Organization />
+    </ProtectedRoute>
+  }
+/>
 
           <Route
             path="/settings"

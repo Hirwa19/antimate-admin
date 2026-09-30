@@ -1,31 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  UserPlus,
-  User,
-  Phone,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  KeyRound,
-  RefreshCw,
-  ArrowLeft,
-  CheckCircle2,
-  AlertCircle,
-  Clock3,
-  ChevronDown,
-} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import api from "../api/axios";
-import { useAppSettings } from "../context/AppSettingsContext";
 
-export default function CreateWorker() {
+export default function CreateEmployee() {
   const navigate = useNavigate();
-  const { language } = useAppSettings();
 
-  const isRw = language === "rw";
+  const [departments, setDepartments] = useState([]);
+  const [positions, setPositions] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [employees, setEmployees] = useState([]);
+
+  const [loadingData, setLoadingData] = useState(true);
+  const [sendingOTP, setSendingOTP] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(0);
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     firstName: "",
@@ -33,1801 +26,1382 @@ export default function CreateWorker() {
     phone: "",
     email: "",
     password: "",
-    confirmPassword: "",
-    role: "",
+
+    department: "",
+    position: "",
+    team: "",
+    manager: "",
+
+    employmentType: "full_time",
+    accessLevel: "staff",
+
+    otp: "",
   });
 
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState("form");
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
-
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const [countdown, setCountdown] = useState(0);
-
-  const roles = useMemo(
-  () => [
-    "Admin",
-    "Technician",
-    "Worker",
-  ],
-  []
-);
-
-  /* ============================================================
-     OTP COUNTDOWN
-  ============================================================ */
+  // ============================================================
+  // LOAD ORGANIZATION DATA
+  // ============================================================
 
   useEffect(() => {
-    if (countdown <= 0) return;
+    loadOrganizationData();
+  }, []);
 
-    const timer = setInterval(() => {
-      setCountdown((current) =>
-        current > 0 ? current - 1 : 0
+  const loadOrganizationData = async () => {
+    try {
+      setLoadingData(true);
+      setError("");
+
+      const [
+        departmentsResponse,
+        positionsResponse,
+        teamsResponse,
+        employeesResponse,
+      ] = await Promise.all([
+        api.get("/departments"),
+        api.get("/positions"),
+        api.get("/teams"),
+        api.get("/workers"),
+      ]);
+
+      setDepartments(
+        Array.isArray(departmentsResponse.data)
+          ? departmentsResponse.data
+          : departmentsResponse.data?.departments || []
       );
-    }, 1000);
 
-    return () => clearInterval(timer);
-  }, [countdown]);
+      setPositions(
+        Array.isArray(positionsResponse.data)
+          ? positionsResponse.data
+          : positionsResponse.data?.positions || []
+      );
 
-  /* ============================================================
-     FORM UPDATE
-  ============================================================ */
+      setTeams(
+        Array.isArray(teamsResponse.data)
+          ? teamsResponse.data
+          : teamsResponse.data?.teams || []
+      );
 
-  const updateField = (field, value) => {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
+      setEmployees(
+        Array.isArray(employeesResponse.data)
+          ? employeesResponse.data
+          : employeesResponse.data?.workers || []
+      );
+    } catch (err) {
+      console.error(
+        "LOAD ORGANIZATION DATA ERROR:",
+        err
+      );
+
+      setError(
+        err.response?.data?.message ||
+          "Failed to load organization data."
+      );
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  // ============================================================
+  // FORM CHANGE
+  // ============================================================
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
     }));
 
     setError("");
-    setSuccess("");
+    setMessage("");
+
+    // Department changed
+    if (name === "department") {
+      setForm((prev) => ({
+        ...prev,
+        department: value,
+        position: "",
+        team: "",
+      }));
+    }
   };
 
-  /* ============================================================
-     VALIDATION
-  ============================================================ */
+  // ============================================================
+  // FILTER POSITIONS
+  // ============================================================
 
-  const validateForm = () => {
-    if (!form.firstName.trim()) {
-      return isRw
-        ? "Andika First Name y'umukozi."
-        : "Enter the worker's first name.";
+  const filteredPositions = useMemo(() => {
+    if (!form.department) {
+      return [];
     }
 
-    if (!form.secondName.trim()) {
-      return isRw
-        ? "Andika Second Name y'umukozi."
-        : "Enter the worker's second name.";
+    return positions.filter(
+      (position) => {
+        const departmentId =
+          position.department?._id ||
+          position.department;
+
+        return (
+          String(departmentId) ===
+          String(form.department)
+        );
+      }
+    );
+  }, [
+    positions,
+    form.department,
+  ]);
+
+  // ============================================================
+  // FILTER TEAMS
+  // ============================================================
+
+  const filteredTeams = useMemo(() => {
+    if (!form.department) {
+      return [];
     }
+
+    return teams.filter(
+      (team) => {
+        const departmentId =
+          team.department?._id ||
+          team.department;
+
+        return (
+          String(departmentId) ===
+          String(form.department)
+        );
+      }
+    );
+  }, [
+    teams,
+    form.department,
+  ]);
+
+  // ============================================================
+  // MANAGERS
+  // ============================================================
+
+  const managers = useMemo(() => {
+    return employees.filter((employee) => {
+      if (employee.status) {
+        return employee.status === "active";
+      }
+
+      return employee.active !== false;
+    });
+  }, [employees]);
+
+  // ============================================================
+  // SEND OTP
+  // ============================================================
+
+  const handleSendOTP = async () => {
+    setError("");
+    setMessage("");
 
     if (!form.phone.trim()) {
-      return isRw
-        ? "Andika numero ya telefone."
-        : "Enter the worker's phone number.";
+      setError("Phone number is required.");
+      return;
     }
 
     if (!form.email.trim()) {
-      return isRw
-        ? "Andika email y'umukozi."
-        : "Enter the worker's email.";
-    }
-
-    if (!form.password) {
-      return isRw
-        ? "Andika password."
-        : "Enter a password.";
-    }
-
-    if (form.password.length < 6) {
-      return isRw
-        ? "Password igomba kuba nibura characters 6."
-        : "Password must contain at least 6 characters.";
-    }
-
-    if (form.password !== form.confirmPassword) {
-      return isRw
-        ? "Passwords ntizihura."
-        : "Passwords do not match.";
-    }
-
-    if (!form.role) {
-      return isRw
-        ? "Hitamo role y'umukozi."
-        : "Select a worker role.";
-    }
-
-    return "";
-  };
-
-  /* ============================================================
-     SEND OTP
-  ============================================================ */
-
-  const sendOtp = async () => {
-    const validationError = validateForm();
-
-    if (validationError) {
-      setError(validationError);
+      setError("Email address is required.");
       return;
     }
 
     try {
-      setSendingOtp(true);
-      setError("");
-      setSuccess("");
+      setSendingOTP(true);
 
-      const res = await api.post(
+      const response = await api.post(
         "/workers/send-otp",
         {
           phone: form.phone.trim(),
-          email: form.email.trim(),
+          email: form.email.trim().toLowerCase(),
         }
       );
 
-      console.log(
-        "WORKER OTP RESPONSE:",
-        res.data
-      );
+      if (response.data?.success) {
+        setOtpSent(true);
 
-      setStep("otp");
-      setCountdown(60);
+        setOtpExpiresIn(
+          response.data.expiresIn || 300
+        );
 
-      setSuccess(
-        isRw
-          ? "OTP yoherejwe. Reba kuri telefone y'umukozi."
-          : "OTP sent. Check the worker's phone."
-      );
+        setMessage(
+          "OTP sent successfully. Check the employee's phone."
+        );
+      } else {
+        setError(
+          response.data?.message ||
+            "Failed to send OTP."
+        );
+      }
     } catch (err) {
       console.error(
-        "SEND WORKER OTP ERROR:",
-        err.response?.data || err.message
+        "SEND EMPLOYEE OTP ERROR:",
+        err
       );
 
       setError(
         err.response?.data?.message ||
-          (isRw
-            ? "OTP ntiyoherejwe."
-            : "OTP could not be sent.")
+          "Failed to send OTP."
       );
     } finally {
-      setSendingOtp(false);
+      setSendingOTP(false);
     }
   };
 
-  /* ============================================================
-     CREATE WORKER
-  ============================================================ */
+  // ============================================================
+  // OTP COUNTDOWN
+  // ============================================================
 
-  const createWorker = async () => {
-    if (!otp.trim()) {
-      setError(
-        isRw
-          ? "Andika OTP woherejwe."
-          : "Enter the OTP you received."
-      );
-
+  useEffect(() => {
+    if (!otpSent || otpExpiresIn <= 0) {
       return;
     }
 
-    if (otp.trim().length < 4) {
-      setError(
-        isRw
-          ? "OTP ntabwo yuzuye."
-          : "The OTP is incomplete."
-      );
+    const timer = setInterval(() => {
+      setOtpExpiresIn((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setOtpSent(false);
+          return 0;
+        }
 
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [
+    otpSent,
+    otpExpiresIn,
+  ]);
+
+  // ============================================================
+  // FORMAT OTP TIME
+  // ============================================================
+
+  const formatOTPTime = () => {
+    const minutes = Math.floor(
+      otpExpiresIn / 60
+    );
+
+    const seconds =
+      otpExpiresIn % 60;
+
+    return `${minutes}:${String(
+      seconds
+    ).padStart(2, "0")}`;
+  };
+
+  // ============================================================
+  // CREATE EMPLOYEE
+  // ============================================================
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    setError("");
+    setMessage("");
+
+    // ----------------------------------------------------------
+    // Frontend validation
+    // ----------------------------------------------------------
+
+    if (
+      !form.firstName.trim() ||
+      !form.secondName.trim()
+    ) {
+      setError(
+        "First name and second name are required."
+      );
+      return;
+    }
+
+    if (!form.phone.trim()) {
+      setError("Phone number is required.");
+      return;
+    }
+
+    if (!form.email.trim()) {
+      setError("Email address is required.");
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError(
+        "Password must contain at least 6 characters."
+      );
+      return;
+    }
+
+    if (!form.department) {
+      setError("Please select a department.");
+      return;
+    }
+
+    if (!form.position) {
+      setError("Please select a position.");
+      return;
+    }
+
+    if (!form.team) {
+      setError("Please select a team.");
+      return;
+    }
+
+    if (!form.otp) {
+      setError("Please enter the OTP.");
+      return;
+    }
+
+    if (!/^\d{4}$/.test(form.otp)) {
+      setError(
+        "OTP must contain exactly 4 digits."
+      );
       return;
     }
 
     try {
-      setLoading(true);
-      setError("");
-      setSuccess("");
+      setCreating(true);
 
-      const payload = {
-        firstName: form.firstName.trim(),
-        secondName: form.secondName.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        password: form.password,
-        role: form.role,
-        otp: otp.trim(),
-      };
-
-      const res = await api.post(
+      const response = await api.post(
         "/workers",
-        payload
+        {
+          firstName:
+            form.firstName.trim(),
+
+          secondName:
+            form.secondName.trim(),
+
+          phone:
+            form.phone.trim(),
+
+          email:
+            form.email.trim().toLowerCase(),
+
+          password:
+            form.password,
+
+          otp:
+            form.otp.trim(),
+
+          department:
+            form.department,
+
+          position:
+            form.position,
+
+          team:
+            form.team,
+
+          manager:
+            form.manager || null,
+
+          employmentType:
+            form.employmentType,
+
+          accessLevel:
+            form.accessLevel,
+
+          // Keep legacy role compatible
+          role: getLegacyRole(
+            form.accessLevel
+          ),
+        }
       );
 
-      console.log(
-        "CREATED WORKER:",
-        res.data
-      );
+      if (response.data?.success) {
+        setMessage(
+          "Employee created successfully."
+        );
 
-      setSuccess(
-        isRw
-          ? "Umukozi yakozwe neza."
-          : "Worker created successfully."
-      );
+        setOtpSent(false);
+        setOtpExpiresIn(0);
 
-      setStep("created");
+        setTimeout(() => {
+          navigate("/workers");
+        }, 1200);
+      } else {
+        setError(
+          response.data?.message ||
+            "Failed to create employee."
+        );
+      }
     } catch (err) {
       console.error(
-        "CREATE WORKER ERROR:",
-        err.response?.data || err.message
+        "CREATE EMPLOYEE ERROR:",
+        err
       );
 
       setError(
         err.response?.data?.message ||
-          (isRw
-            ? "Umukozi ntiyashoboye gukorwa."
-            : "Worker could not be created.")
+          "Failed to create employee."
       );
     } finally {
-      setLoading(false);
+      setCreating(false);
     }
   };
 
-  /* ============================================================
-     RESEND OTP
-  ============================================================ */
+  // ============================================================
+  // LEGACY ROLE
+  // ============================================================
 
-  const resendOtp = async () => {
-    if (countdown > 0) return;
+  const getLegacyRole = (
+    accessLevel
+  ) => {
+    if (
+      accessLevel === "superadmin"
+    ) {
+      return "admin";
+    }
 
-    await sendOtp();
+    if (
+      accessLevel === "admin"
+    ) {
+      return "admin";
+    }
+
+    if (
+      accessLevel === "manager"
+    ) {
+      return "admin";
+    }
+
+    return "worker";
   };
 
-  /* ============================================================
-     RESET
-  ============================================================ */
+  // ============================================================
+  // RESET FORM
+  // ============================================================
 
-  const createAnother = () => {
+  const resetForm = () => {
     setForm({
       firstName: "",
       secondName: "",
       phone: "",
       email: "",
       password: "",
-      confirmPassword: "",
-      role: "",
+
+      department: "",
+      position: "",
+      team: "",
+      manager: "",
+
+      employmentType: "full_time",
+      accessLevel: "staff",
+
+      otp: "",
     });
 
-    setOtp("");
-    setStep("form");
+    setOtpSent(false);
+    setOtpExpiresIn(0);
+    setMessage("");
     setError("");
-    setSuccess("");
-    setCountdown(0);
   };
 
-  const inputClass = "worker-form-input";
-
-  const workerFullName =
-    `${form.firstName} ${form.secondName}`.trim();
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
-    <div className="create-worker-page">
-
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-
-      <header className="create-worker-header">
-
-        <div>
-
-          <div className="create-worker-breadcrumb">
-
-            <UserPlus size={14} />
-
-            <span>
-              Administration
-            </span>
-
-            <span>/</span>
-
-            <span>
-              {isRw
-                ? "Ongeramo umukozi"
-                : "Create Worker"}
-            </span>
-
-          </div>
-
-          <h1>
-            {isRw
-              ? "Ongeramo Umukozi"
-              : "Create Worker"}
-          </h1>
-
-          <p>
-            {isRw
-              ? "Kora konti y'umukozi mushya wa ANTIMATE kandi uyigenzure ukoresheje OTP."
-              : "Create a new ANTIMATE staff account and verify it using OTP."}
-          </p>
-
-        </div>
-
-        <button
-          type="button"
-          className="worker-back-button"
-          onClick={() => navigate("/workers")}
-        >
-          <ArrowLeft size={17} />
-
-          {isRw
-            ? "Subira ku bakozi"
-            : "Back to Workers"}
-        </button>
-
-      </header>
-
-      {/* ======================================================
-          ALERTS
-      ====================================================== */}
-
-      {error && (
-        <div className="worker-alert worker-alert-error">
-
-          <AlertCircle size={18} />
-
-          <span>{error}</span>
-
-          <button
-            type="button"
-            onClick={() => setError("")}
-          >
-            ×
-          </button>
-
-        </div>
-      )}
-
-      {success && (
-        <div className="worker-alert worker-alert-success">
-
-          <CheckCircle2 size={18} />
-
-          <span>{success}</span>
-
-          <button
-            type="button"
-            onClick={() => setSuccess("")}
-          >
-            ×
-          </button>
-
-        </div>
-      )}
-
-      {/* ======================================================
-          CREATED
-      ====================================================== */}
-
-      {step === "created" && (
-        <section className="worker-created">
-
-          <div className="worker-created-icon">
-            <CheckCircle2 size={34} />
-          </div>
-
-          <h2>
-            {isRw
-              ? "Umukozi yakozwe neza"
-              : "Worker created successfully"}
-          </h2>
-
-          <p>
-            {isRw
-              ? `${workerFullName} yamaze gushyirwa muri ANTIMATE Staff.`
-              : `${workerFullName} has been added to ANTIMATE Staff.`}
-          </p>
-
-          <div className="worker-created-actions">
-
-            <button
-              type="button"
-              className="worker-secondary-button"
-              onClick={() => navigate("/workers")}
-            >
-              <ArrowLeft size={16} />
-
-              {isRw
-                ? "Subira ku bakozi"
-                : "Back to Workers"}
-            </button>
-
-            <button
-              type="button"
-              className="worker-primary-button"
-              onClick={createAnother}
-            >
-              <UserPlus size={16} />
-
-              {isRw
-                ? "Ongeramo undi"
-                : "Create Another"}
-            </button>
-
-          </div>
-
-        </section>
-      )}
-
-      {/* ======================================================
-          MAIN FORM
-      ====================================================== */}
-
-      {step !== "created" && (
-        <div className="create-worker-workspace">
-
-          {/* ==================================================
-              PROGRESS
-          ================================================== */}
-
-          <div className="worker-progress">
-
-            <div
-              className={
-                step === "form"
-                  ? "worker-progress-step active"
-                  : "worker-progress-step done"
-              }
-            >
-              <span>1</span>
-
-              <div>
-                <strong>
-                  {isRw
-                    ? "Amakuru"
-                    : "Information"}
-                </strong>
-
-                <small>
-                  {isRw
-                    ? "Amakuru y'umukozi"
-                    : "Worker information"}
-                </small>
-              </div>
-            </div>
-
-            <div className="worker-progress-line" />
-
-            <div
-              className={
-                step === "otp"
-                  ? "worker-progress-step active"
-                  : "worker-progress-step"
-              }
-            >
-              <span>2</span>
-
-              <div>
-                <strong>
-                  OTP
-                </strong>
-
-                <small>
-                  {isRw
-                    ? "Kwemeza numero"
-                    : "Verify phone"}
-                </small>
-              </div>
-            </div>
-
-          </div>
-
-          {/* ==================================================
-              FORM
-          ================================================== */}
-
-          {step === "form" && (
-            <section className="worker-form-section">
-
-              <div className="worker-section-header">
-
-                <div className="worker-section-icon">
-                  <User size={19} />
-                </div>
-
-                <div>
-                  <h2>
-                    {isRw
-                      ? "Amakuru y'umukozi"
-                      : "Worker Information"}
-                  </h2>
-
-                  <p>
-                    {isRw
-                      ? "Uzuza amakuru yose akenewe mbere yo kohereza OTP."
-                      : "Complete the required worker information before sending the OTP."}
-                  </p>
-                </div>
-
-              </div>
-
-              <div className="worker-form-body">
-
-                {/* FIRST NAME */}
-
-                <FormField
-                  icon={<User size={16} />}
-                  label={
-                    isRw
-                      ? "First Name"
-                      : "First Name"
-                  }
-                  required
-                >
-                  <input
-                    className={inputClass}
-                    value={form.firstName}
-                    onChange={(e) =>
-                      updateField(
-                        "firstName",
-                        e.target.value
-                      )
-                    }
-                    placeholder={
-                      isRw
-                        ? "Urugero: Hirwa"
-                        : "e.g. John"
-                    }
-                    autoComplete="given-name"
-                  />
-                </FormField>
-
-                {/* SECOND NAME */}
-
-                <FormField
-                  icon={<User size={16} />}
-                  label={
-                    isRw
-                      ? "Second Name"
-                      : "Second Name"
-                  }
-                  required
-                >
-                  <input
-                    className={inputClass}
-                    value={form.secondName}
-                    onChange={(e) =>
-                      updateField(
-                        "secondName",
-                        e.target.value
-                      )
-                    }
-                    placeholder={
-                      isRw
-                        ? "Urugero: Salem"
-                        : "e.g. Doe"
-                    }
-                    autoComplete="family-name"
-                  />
-                </FormField>
-
-                {/* PHONE */}
-
-                <FormField
-                  icon={<Phone size={16} />}
-                  label={
-                    isRw
-                      ? "Telefone"
-                      : "Phone"
-                  }
-                  required
-                >
-                  <input
-                    className={inputClass}
-                    value={form.phone}
-                    onChange={(e) =>
-                      updateField(
-                        "phone",
-                        e.target.value
-                      )
-                    }
-                    placeholder="+250 7XX XXX XXX"
-                    autoComplete="tel"
-                    inputMode="tel"
-                  />
-                </FormField>
-
-                {/* EMAIL */}
-
-                <FormField
-                  icon={<Mail size={16} />}
-                  label="Email"
-                  required
-                >
-                  <input
-                    type="email"
-                    className={inputClass}
-                    value={form.email}
-                    onChange={(e) =>
-                      updateField(
-                        "email",
-                        e.target.value
-                      )
-                    }
-                    placeholder="worker@antimate.ai"
-                    autoComplete="email"
-                  />
-                </FormField>
-
-                {/* PASSWORD */}
-
-                <FormField
-                  icon={<Lock size={16} />}
-                  label="Password"
-                  required
-                >
-                  <div className="worker-password-input">
-
-                    <input
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
-                      className={inputClass}
-                      value={form.password}
-                      onChange={(e) =>
-                        updateField(
-                          "password",
-                          e.target.value
-                        )
-                      }
-                      placeholder={
-                        isRw
-                          ? "Nibura characters 6"
-                          : "At least 6 characters"
-                      }
-                      autoComplete="new-password"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPassword(
-                          (value) => !value
-                        )
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeOff size={17} />
-                      ) : (
-                        <Eye size={17} />
-                      )}
-                    </button>
-
-                  </div>
-                </FormField>
-
-                {/* CONFIRM PASSWORD */}
-
-                <FormField
-                  icon={<Lock size={16} />}
-                  label={
-                    isRw
-                      ? "Emeza Password"
-                      : "Confirm Password"
-                  }
-                  required
-                >
-                  <div className="worker-password-input">
-
-                    <input
-                      type={
-                        showConfirmPassword
-                          ? "text"
-                          : "password"
-                      }
-                      className={inputClass}
-                      value={form.confirmPassword}
-                      onChange={(e) =>
-                        updateField(
-                          "confirmPassword",
-                          e.target.value
-                        )
-                      }
-                      placeholder={
-                        isRw
-                          ? "Subiramo password"
-                          : "Repeat password"
-                      }
-                      autoComplete="new-password"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(
-                          (value) => !value
-                        )
-                      }
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff size={17} />
-                      ) : (
-                        <Eye size={17} />
-                      )}
-                    </button>
-
-                  </div>
-                </FormField>
-
-                {/* ROLE */}
-
-                <FormField
-                  icon={<ShieldCheck size={16} />}
-                  label="Role"
-                  required
-                >
-                  <div className="worker-select-wrapper">
-
-                    <select
-                      className={inputClass}
-                      value={form.role}
-                      onChange={(e) =>
-                        updateField(
-                          "role",
-                          e.target.value
-                        )
-                      }
-                    >
-                      <option value="">
-                        {isRw
-                          ? "Hitamo Role"
-                          : "Select Role"}
-                      </option>
-
-                      {roles.map((role) => (
-                        <option
-                          key={role}
-                          value={role}
-                        >
-                          {role}
-                        </option>
-                      ))}
-
-                    </select>
-
-                    <ChevronDown size={16} />
-
-                  </div>
-                </FormField>
-
-              </div>
-
-              {/* SECURITY NOTE */}
-
-              <div className="worker-security-note">
-
-                <ShieldCheck size={19} />
-
-                <div>
-
-                  <strong>
-                    OTP verification
-                  </strong>
-
-                  <p>
-                    {isRw
-                      ? "Nyuma yo kuzuza aya makuru, OTP izoherezwa kuri telefone y'umukozi kugirango hemezwe ko numero ari iye."
-                      : "After completing this form, an OTP will be sent to the worker's phone to verify the phone number."}
-                  </p>
-
-                </div>
-
-              </div>
-
-              {/* ACTION */}
-
-              <div className="worker-form-footer">
-
-                <button
-                  type="button"
-                  className="worker-secondary-button"
-                  onClick={() => navigate("/workers")}
-                >
-                  <ArrowLeft size={16} />
-
-                  {isRw
-                    ? "Kureka"
-                    : "Cancel"}
-                </button>
-
-                <button
-                  type="button"
-                  className="worker-primary-button"
-                  onClick={sendOtp}
-                  disabled={sendingOtp}
-                >
-
-                  {sendingOtp ? (
-                    <>
-                      <RefreshCw
-                        size={16}
-                        className="worker-spin"
-                      />
-
-                      {isRw
-                        ? "Kohereza OTP..."
-                        : "Sending OTP..."}
-                    </>
-                  ) : (
-                    <>
-                      <KeyRound size={16} />
-
-                      {isRw
-                        ? "Ohereza OTP"
-                        : "Send OTP"}
-                    </>
-                  )}
-
-                </button>
-
-              </div>
-
-            </section>
-          )}
-
-          {/* ==================================================
-              OTP
-          ================================================== */}
-
-          {step === "otp" && (
-            <section className="worker-otp-section">
-
-              <div className="worker-otp-icon">
-                <KeyRound size={30} />
-              </div>
-
-              <span className="worker-otp-label">
-                OTP VERIFICATION
-              </span>
-
-              <h2>
-                {isRw
-                  ? "Emeza telefone y'umukozi"
-                  : "Verify worker phone"}
-              </h2>
-
-              <p>
-                {isRw
-                  ? `Andika OTP twohereje kuri ${form.phone}.`
-                  : `Enter the OTP sent to ${form.phone}.`}
-              </p>
-
-              <div className="worker-otp-input-wrapper">
-
-                <input
-                  value={otp}
-                  onChange={(e) => {
-                    const value =
-                      e.target.value
-                        .replace(/[^0-9]/g, "")
-                        .slice(0, 6);
-
-                    setOtp(value);
-                    setError("");
-                  }}
-                  placeholder="000000"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  className="worker-otp-input"
-                />
-
-              </div>
-
-              <div className="worker-otp-meta">
-
-                <div>
-                  <Clock3 size={15} />
-
-                  {countdown > 0 ? (
-                    <span>
-                      {isRw
-                        ? `Ongera wohereze muri ${countdown}s`
-                        : `Resend in ${countdown}s`}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={resendOtp}
-                      disabled={sendingOtp}
-                    >
-                      {sendingOtp ? (
-                        <>
-                          <RefreshCw
-                            size={14}
-                            className="worker-spin"
-                          />
-
-                          {isRw
-                            ? "Ohereza..."
-                            : "Sending..."}
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw size={14} />
-
-                          {isRw
-                            ? "Ongera wohereze OTP"
-                            : "Resend OTP"}
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                </div>
-
-              </div>
-
-              <div className="worker-otp-summary">
-
-                <div>
-                  <span>
-                    {isRw
-                      ? "Umukozi"
-                      : "Worker"}
-                  </span>
-
-                  <strong>
-                    {workerFullName}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>
-                    {isRw
-                      ? "Telefone"
-                      : "Phone"}
-                  </span>
-
-                  <strong>
-                    {form.phone}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>
-                    Role
-                  </span>
-
-                  <strong>
-                    {form.role}
-                  </strong>
-                </div>
-
-              </div>
-
-              <div className="worker-otp-actions">
-
-                <button
-                  type="button"
-                  className="worker-secondary-button"
-                  onClick={() => {
-                    setStep("form");
-                    setOtp("");
-                    setError("");
-                    setSuccess("");
-                  }}
-                  disabled={loading}
-                >
-                  <ArrowLeft size={16} />
-
-                  {isRw
-                    ? "Hindura amakuru"
-                    : "Edit information"}
-                </button>
-
-                <button
-                  type="button"
-                  className="worker-primary-button"
-                  onClick={createWorker}
-                  disabled={
-                    loading ||
-                    otp.length < 4
-                  }
-                >
-
-                  {loading ? (
-                    <>
-                      <RefreshCw
-                        size={16}
-                        className="worker-spin"
-                      />
-
-                      {isRw
-                        ? "Turimo gukora..."
-                        : "Creating..."}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={16} />
-
-                      {isRw
-                        ? "Emeza & Kora Worker"
-                        : "Verify & Create Worker"}
-                    </>
-                  )}
-
-                </button>
-
-              </div>
-
-            </section>
-          )}
-
-        </div>
-      )}
-
-      {/* ======================================================
-          CSS
-      ====================================================== */}
-
+    <div className="create-employee-page">
       <style>{`
+        * {
+          box-sizing: border-box;
+        }
 
-        .create-worker-page {
+        .create-employee-page {
+          min-height: 100vh;
+          background: #f6f8fc;
+          padding: 28px;
+          color: #172033;
+        }
+
+        .create-employee-container {
           width: 100%;
-          max-width: 1100px;
+          max-width: 1050px;
           margin: 0 auto;
-          padding: 4px 0 40px;
-          color: var(--admin-text);
         }
 
-        .create-worker-header {
+        .create-employee-header {
           display: flex;
-          align-items: flex-end;
+          align-items: flex-start;
           justify-content: space-between;
-          gap: 24px;
-          margin-bottom: 22px;
+          gap: 20px;
+          margin-bottom: 24px;
         }
 
-        .create-worker-breadcrumb {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-bottom: 8px;
-          color: var(--admin-text-muted);
-          font-size: 12px;
-        }
-
-        .create-worker-header h1 {
-          margin: 0;
-          font-size: 29px;
-          line-height: 1.2;
-          font-weight: 760;
-          letter-spacing: -.5px;
-        }
-
-        .create-worker-header p {
-          margin: 7px 0 0;
-          color: var(--admin-text-muted);
-          font-size: 13px;
-          line-height: 1.55;
-        }
-
-        .worker-back-button {
-          min-height: 40px;
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          padding: 0 13px;
-          flex-shrink: 0;
-          border: 1px solid var(--admin-border);
-          border-radius: 8px;
-          background: var(--admin-surface);
-          color: var(--admin-text);
-          cursor: pointer;
-          font-size: 11px;
-          font-weight: 650;
-        }
-
-        .worker-back-button:hover {
-          border-color: var(--admin-accent);
-          color: var(--admin-accent);
-        }
-
-        .worker-alert {
-          min-height: 45px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 16px;
-          padding: 0 12px;
-          border-radius: 8px;
-          font-size: 12px;
-        }
-
-        .worker-alert span {
-          flex: 1;
-        }
-
-        .worker-alert button {
-          width: 28px;
-          height: 28px;
-          display: grid;
-          place-items: center;
-          border: 0;
-          background: transparent;
-          color: inherit;
-          cursor: pointer;
-          font-size: 20px;
-        }
-
-        .worker-alert-error {
-          border: 1px solid rgba(239, 107, 107, .25);
-          background: rgba(239, 107, 107, .06);
-          color: #ef8585;
-        }
-
-        .worker-alert-success {
-          border: 1px solid rgba(69, 201, 130, .25);
-          background: rgba(69, 201, 130, .06);
-          color: #55ca88;
-        }
-
-        .create-worker-workspace {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .worker-progress {
-          display: flex;
-          align-items: center;
-          padding: 14px 18px;
-          border: 1px solid var(--admin-border);
-          border-radius: 10px;
-          background: var(--admin-surface);
-        }
-
-        .worker-progress-step {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          min-width: 160px;
-          color: var(--admin-text-muted);
-        }
-
-        .worker-progress-step > span {
-          width: 31px;
-          height: 31px;
-          display: grid;
-          place-items: center;
-          flex-shrink: 0;
-          border: 1px solid var(--admin-border);
-          border-radius: 50%;
-          font-size: 11px;
+        .header-left h1 {
+          margin: 0 0 7px;
+          font-size: 28px;
           font-weight: 750;
+          letter-spacing: -0.5px;
         }
 
-        .worker-progress-step > div {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
+        .header-left p {
+          margin: 0;
+          color: #687386;
+          font-size: 14px;
         }
 
-        .worker-progress-step strong {
-          font-size: 11px;
+        .back-button {
+          border: 1px solid #dce2ec;
+          background: #ffffff;
+          color: #263248;
+          height: 42px;
+          padding: 0 16px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 650;
+          transition: 0.2s ease;
         }
 
-        .worker-progress-step small {
-          font-size: 9px;
+        .back-button:hover {
+          background: #f1f4f9;
         }
 
-        .worker-progress-step.active {
-          color: var(--admin-accent);
-        }
-
-        .worker-progress-step.active > span {
-          border-color: var(--admin-accent);
-          background: var(--admin-accent-soft);
-        }
-
-        .worker-progress-step.done {
-          color: #4bc985;
-        }
-
-        .worker-progress-step.done > span {
-          border-color: #4bc985;
-        }
-
-        .worker-progress-line {
-          height: 1px;
-          flex: 1;
-          max-width: 180px;
-          margin: 0 15px;
-          background: var(--admin-border);
-        }
-
-        .worker-form-section {
-          border: 1px solid var(--admin-border);
-          border-radius: 12px;
-          background: var(--admin-surface);
+        .employee-form {
+          background: #ffffff;
+          border: 1px solid #e3e8f0;
+          border-radius: 16px;
+          box-shadow: 0 8px 28px rgba(26, 42, 72, 0.05);
           overflow: hidden;
         }
 
-        .worker-section-header {
-          display: flex;
-          align-items: center;
-          gap: 11px;
-          padding: 18px 20px;
-          border-bottom: 1px solid var(--admin-border);
+        .form-section {
+          padding: 25px;
+          border-bottom: 1px solid #edf0f5;
         }
 
-        .worker-section-icon {
-          width: 38px;
-          height: 38px;
-          display: grid;
-          place-items: center;
-          flex-shrink: 0;
-          border-radius: 9px;
-          background: var(--admin-accent-soft);
-          color: var(--admin-accent);
+        .form-section:last-child {
+          border-bottom: 0;
         }
 
-        .worker-section-header h2 {
-          margin: 0;
-          font-size: 15px;
-          font-weight: 720;
-        }
-
-        .worker-section-header p {
-          margin: 4px 0 0;
-          color: var(--admin-text-muted);
-          font-size: 11px;
-          line-height: 1.5;
-        }
-
-        .worker-form-body {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 18px 20px;
-          padding: 20px;
-        }
-
-        .worker-form-field {
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 7px;
-        }
-
-        .worker-form-label {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          color: var(--admin-text);
-          font-size: 11px;
-          font-weight: 680;
-        }
-
-        .worker-form-label svg {
-          color: var(--admin-text-muted);
-        }
-
-        .worker-required {
-          color: #ef7777;
-        }
-
-        .worker-form-input {
-          width: 100%;
-          height: 42px;
-          box-sizing: border-box;
-          border: 1px solid var(--admin-border);
-          border-radius: 8px;
-          outline: none;
-          background: var(--admin-surface-subtle);
-          color: var(--admin-text);
-          padding: 0 11px;
-          font-size: 12px;
-          transition:
-            border-color .15s ease,
-            box-shadow .15s ease;
-        }
-
-        .worker-form-input::placeholder {
-          color: var(--admin-text-muted);
-          opacity: .75;
-        }
-
-        .worker-form-input:focus {
-          border-color: var(--admin-accent);
-          box-shadow:
-            0 0 0 3px
-            var(--admin-accent-soft);
-        }
-
-        .worker-password-input {
-          position: relative;
-        }
-
-        .worker-password-input .worker-form-input {
-          padding-right: 43px;
-        }
-
-        .worker-password-input button {
-          position: absolute;
-          top: 50%;
-          right: 6px;
-          width: 31px;
-          height: 31px;
-          display: grid;
-          place-items: center;
-          transform: translateY(-50%);
-          border: 0;
-          border-radius: 6px;
-          background: transparent;
-          color: var(--admin-text-muted);
-          cursor: pointer;
-        }
-
-        .worker-password-input button:hover {
-          color: var(--admin-accent);
-        }
-
-        .worker-select-wrapper {
-          position: relative;
-        }
-
-        .worker-select-wrapper select {
-          appearance: none;
-          padding-right: 35px;
-          cursor: pointer;
-        }
-
-        .worker-select-wrapper > svg {
-          position: absolute;
-          top: 50%;
-          right: 11px;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: var(--admin-text-muted);
-        }
-
-        .worker-security-note {
-          display: flex;
-          gap: 11px;
-          margin: 0 20px 20px;
-          padding: 13px;
-          border: 1px solid var(--admin-border);
-          border-radius: 9px;
-          background: var(--admin-surface-subtle);
-        }
-
-        .worker-security-note > svg {
-          flex-shrink: 0;
-          color: var(--admin-accent);
-        }
-
-        .worker-security-note strong {
-          display: block;
-          margin-bottom: 4px;
-          font-size: 11px;
-        }
-
-        .worker-security-note p {
-          margin: 0;
-          color: var(--admin-text-muted);
-          font-size: 10px;
-          line-height: 1.6;
-        }
-
-        .worker-form-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 8px;
-          padding: 15px 20px;
-          border-top: 1px solid var(--admin-border);
-        }
-
-        .worker-primary-button,
-        .worker-secondary-button {
-          min-height: 40px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          padding: 0 14px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 11px;
-          font-weight: 700;
-        }
-
-        .worker-primary-button {
-          border: 1px solid var(--admin-accent);
-          background: var(--admin-accent);
-          color: white;
-        }
-
-        .worker-primary-button:hover {
-          opacity: .91;
-        }
-
-        .worker-secondary-button {
-          border: 1px solid var(--admin-border);
-          background: var(--admin-surface-subtle);
-          color: var(--admin-text);
-        }
-
-        .worker-secondary-button:hover {
-          border-color: var(--admin-accent);
-          color: var(--admin-accent);
-        }
-
-        .worker-primary-button:disabled,
-        .worker-secondary-button:disabled {
-          opacity: .55;
-          cursor: not-allowed;
-        }
-
-        .worker-otp-section {
-          max-width: 650px;
-          width: 100%;
-          margin: 0 auto;
-          padding: 35px 30px;
-          border: 1px solid var(--admin-border);
-          border-radius: 12px;
-          background: var(--admin-surface);
-          text-align: center;
-        }
-
-        .worker-otp-icon {
-          width: 61px;
-          height: 61px;
-          display: grid;
-          place-items: center;
-          margin: 0 auto 13px;
-          border-radius: 50%;
-          background: var(--admin-accent-soft);
-          color: var(--admin-accent);
-        }
-
-        .worker-otp-label {
-          color: var(--admin-text-muted);
-          font-size: 9px;
-          font-weight: 800;
-          letter-spacing: .8px;
-        }
-
-        .worker-otp-section h2 {
-          margin: 7px 0 5px;
-          font-size: 20px;
-        }
-
-        .worker-otp-section > p {
-          max-width: 450px;
-          margin: 0 auto;
-          color: var(--admin-text-muted);
-          font-size: 11px;
-          line-height: 1.6;
-        }
-
-        .worker-otp-input-wrapper {
-          max-width: 330px;
-          margin: 22px auto 10px;
-        }
-
-        .worker-otp-input {
-          width: 100%;
-          height: 58px;
-          box-sizing: border-box;
-          border: 1px solid var(--admin-border);
-          border-radius: 10px;
-          outline: none;
-          background: var(--admin-surface-subtle);
-          color: var(--admin-text);
-          text-align: center;
-          font-family:
-            ui-monospace,
-            SFMono-Regular,
-            Menlo,
-            Monaco,
-            Consolas,
-            monospace;
-          font-size: 23px;
-          font-weight: 750;
-          letter-spacing: 7px;
-        }
-
-        .worker-otp-input:focus {
-          border-color: var(--admin-accent);
-          box-shadow:
-            0 0 0 3px
-            var(--admin-accent-soft);
-        }
-
-        .worker-otp-meta {
-          display: flex;
-          justify-content: center;
+        .section-heading {
           margin-bottom: 20px;
         }
 
-        .worker-otp-meta > div {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: var(--admin-text-muted);
-          font-size: 10px;
+        .section-heading h2 {
+          margin: 0 0 5px;
+          font-size: 17px;
+          font-weight: 750;
         }
 
-        .worker-otp-meta button {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          border: 0;
-          background: transparent;
-          color: var(--admin-accent);
-          cursor: pointer;
-          font-size: 10px;
-          font-weight: 700;
+        .section-heading p {
+          margin: 0;
+          color: #7a8495;
+          font-size: 13px;
         }
 
-        .worker-otp-meta button:disabled {
-          opacity: .5;
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+        }
+
+        .form-grid.three {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .form-group {
+          min-width: 0;
+        }
+
+        .form-group.full {
+          grid-column: 1 / -1;
+        }
+
+        .form-label {
+          display: block;
+          margin-bottom: 7px;
+          color: #273247;
+          font-size: 13px;
+          font-weight: 650;
+        }
+
+        .required {
+          color: #d33b4f;
+        }
+
+        .form-input,
+        .form-select {
+          width: 100%;
+          height: 44px;
+          padding: 0 13px;
+          border: 1px solid #d9dfe9;
+          border-radius: 9px;
+          outline: none;
+          background: #ffffff;
+          color: #172033;
+          font-size: 14px;
+          transition: border 0.2s ease,
+            box-shadow 0.2s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+          border-color: #5865f2;
+          box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.1);
+        }
+
+        .form-input::placeholder {
+          color: #a0a8b6;
+        }
+
+        .form-select:disabled {
+          background: #f3f5f8;
+          color: #9aa2b0;
           cursor: not-allowed;
         }
 
-        .worker-otp-summary {
-          display: flex;
-          align-items: stretch;
-          justify-content: center;
-          margin: 0 auto 22px;
-          border: 1px solid var(--admin-border);
-          border-radius: 9px;
-          overflow: hidden;
-          text-align: left;
+        .field-help {
+          margin-top: 6px;
+          color: #8a93a2;
+          font-size: 12px;
+          line-height: 1.4;
         }
 
-        .worker-otp-summary > div {
-          min-width: 0;
+        .otp-row {
+          display: flex;
+          gap: 10px;
+        }
+
+        .otp-row .form-input {
           flex: 1;
-          padding: 11px;
-          border-right: 1px solid var(--admin-border);
         }
 
-        .worker-otp-summary > div:last-child {
-          border-right: 0;
-        }
-
-        .worker-otp-summary span {
-          display: block;
-          margin-bottom: 4px;
-          color: var(--admin-text-muted);
-          font-size: 9px;
-        }
-
-        .worker-otp-summary strong {
-          display: block;
-          overflow: hidden;
-          text-overflow: ellipsis;
+        .otp-button {
+          height: 44px;
+          padding: 0 18px;
+          border: 0;
+          border-radius: 9px;
+          background: #5865f2;
+          color: #ffffff;
+          cursor: pointer;
           white-space: nowrap;
-          font-size: 11px;
+          font-size: 13px;
+          font-weight: 700;
+          transition: 0.2s ease;
         }
 
-        .worker-otp-actions {
-          display: flex;
-          justify-content: center;
-          gap: 8px;
+        .otp-button:hover {
+          background: #4754df;
         }
 
-        .worker-created {
-          min-height: 350px;
+        .otp-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .otp-status {
           display: flex;
-          flex-direction: column;
           align-items: center;
-          justify-content: center;
-          padding: 35px 20px;
-          border: 1px solid var(--admin-border);
-          border-radius: 12px;
-          background: var(--admin-surface);
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 9px;
+          padding: 9px 11px;
+          border-radius: 8px;
+          background: #f4f6ff;
+          color: #4e5bd5;
+          font-size: 12px;
+        }
+
+        .otp-expired {
+          color: #c43c4f;
+          background: #fff4f5;
+        }
+
+        .alert {
+          margin: 0 25px 20px;
+          padding: 12px 14px;
+          border-radius: 9px;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+
+        .alert-error {
+          background: #fff2f3;
+          border: 1px solid #ffd7db;
+          color: #b52e40;
+        }
+
+        .alert-success {
+          background: #eefaf3;
+          border: 1px solid #ccebd8;
+          color: #207a45;
+        }
+
+        .loading-box {
+          padding: 35px;
           text-align: center;
+          color: #707b8e;
+          font-size: 14px;
         }
 
-        .worker-created-icon {
-          width: 67px;
-          height: 67px;
-          display: grid;
-          place-items: center;
-          margin-bottom: 16px;
-          border-radius: 50%;
-          background: rgba(69, 201, 130, .08);
-          color: #4bc985;
-        }
-
-        .worker-created h2 {
-          margin: 0;
-          font-size: 20px;
-        }
-
-        .worker-created p {
-          margin: 7px 0 20px;
-          color: var(--admin-text-muted);
-          font-size: 11px;
-        }
-
-        .worker-created-actions {
+        .form-footer {
           display: flex;
-          gap: 8px;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 10px;
+          padding: 20px 25px;
+          background: #fafbfc;
+          border-top: 1px solid #edf0f5;
         }
 
-        .worker-spin {
-          animation: worker-spin 1s linear infinite;
+        .secondary-button,
+        .primary-button {
+          height: 44px;
+          padding: 0 20px;
+          border-radius: 9px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 700;
+          transition: 0.2s ease;
         }
 
-        @keyframes worker-spin {
-          from {
-            transform: rotate(0deg);
-          }
+        .secondary-button {
+          border: 1px solid #d9dfe9;
+          background: #ffffff;
+          color: #344055;
+        }
 
-          to {
-            transform: rotate(360deg);
-          }
+        .secondary-button:hover {
+          background: #f1f3f7;
+        }
+
+        .primary-button {
+          border: 0;
+          background: #5865f2;
+          color: #ffffff;
+        }
+
+        .primary-button:hover {
+          background: #4754df;
+        }
+
+        .primary-button:disabled,
+        .secondary-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .required-note {
+          margin-top: 15px;
+          color: #8a93a2;
+          font-size: 12px;
         }
 
         @media (max-width: 800px) {
-
-          .create-worker-header {
-            align-items: stretch;
-            flex-direction: column;
+          .create-employee-page {
+            padding: 18px;
           }
 
-          .worker-back-button {
-            width: 100%;
+          .form-grid.three {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
-
-          .worker-form-body {
-            grid-template-columns: 1fr;
-          }
-
-          .worker-progress-step {
-            min-width: 0;
-          }
-
-          .worker-progress-line {
-            max-width: none;
-          }
-
         }
 
-        @media (max-width: 600px) {
-
-          .create-worker-header h1 {
-            font-size: 25px;
-          }
-
-          .worker-progress {
+        @media (max-width: 620px) {
+          .create-employee-page {
             padding: 12px;
           }
 
-          .worker-progress-step > div {
-            display: none;
-          }
-
-          .worker-progress-step {
-            justify-content: center;
-          }
-
-          .worker-progress-line {
-            margin: 0 8px;
-          }
-
-          .worker-section-header {
-            padding: 15px;
-          }
-
-          .worker-form-body {
-            padding: 15px;
-          }
-
-          .worker-security-note {
-            margin: 0 15px 15px;
-          }
-
-          .worker-form-footer {
-            flex-direction: column-reverse;
-            padding: 13px 15px;
-          }
-
-          .worker-form-footer button {
-            width: 100%;
-          }
-
-          .worker-otp-section {
-            padding: 28px 17px;
-          }
-
-          .worker-otp-summary {
+          .create-employee-header {
             flex-direction: column;
           }
 
-          .worker-otp-summary > div {
-            border-right: 0;
-            border-bottom: 1px solid var(--admin-border);
+          .header-left h1 {
+            font-size: 23px;
           }
 
-          .worker-otp-summary > div:last-child {
-            border-bottom: 0;
+          .back-button {
+            width: 100%;
           }
 
-          .worker-otp-actions {
+          .form-section {
+            padding: 18px;
+          }
+
+          .form-grid,
+          .form-grid.three {
+            grid-template-columns: 1fr;
+          }
+
+          .form-group.full {
+            grid-column: auto;
+          }
+
+          .otp-row {
+            flex-direction: column;
+          }
+
+          .otp-button {
+            width: 100%;
+          }
+
+          .form-footer {
+            padding: 17px 18px;
             flex-direction: column-reverse;
           }
 
-          .worker-otp-actions button {
+          .form-footer button {
             width: 100%;
           }
 
-          .worker-created-actions {
-            width: 100%;
-            flex-direction: column-reverse;
+          .alert {
+            margin-left: 18px;
+            margin-right: 18px;
           }
-
-          .worker-created-actions button {
-            width: 100%;
-          }
-
         }
-
-        @media (max-width: 400px) {
-
-          .worker-otp-input {
-            height: 53px;
-            font-size: 20px;
-            letter-spacing: 5px;
-          }
-
-        }
-
       `}</style>
 
-    </div>
-  );
-}
+      <div className="create-employee-container">
 
-/* ============================================================
-   FORM FIELD
-============================================================ */
+        {/* ================================================== */}
+        {/* HEADER */}
+        {/* ================================================== */}
 
-function FormField({
-  icon,
-  label,
-  required = false,
-  children,
-}) {
-  return (
-    <div className="worker-form-field">
+        <div className="create-employee-header">
+          <div className="header-left">
+            <h1>Create Employee</h1>
+            <p>
+              Add a new employee to the ANTIMATE organization.
+            </p>
+          </div>
 
-      <label className="worker-form-label">
+          <button
+            type="button"
+            className="back-button"
+            onClick={() =>
+              navigate("/workers")
+            }
+          >
+            ← Back to Employees
+          </button>
+        </div>
 
-        {icon}
+        {/* ================================================== */}
+        {/* FORM */}
+        {/* ================================================== */}
 
-        <span>
-          {label}
-        </span>
+        <form
+          className="employee-form"
+          onSubmit={handleSubmit}
+        >
 
-        {required && (
-          <span className="worker-required">
-            *
-          </span>
-        )}
+          {/* ================================================== */}
+          {/* PERSONAL INFORMATION */}
+          {/* ================================================== */}
 
-      </label>
+          <section className="form-section">
+            <div className="section-heading">
+              <h2>Personal Information</h2>
+              <p>
+                Basic information about the employee.
+              </p>
+            </div>
 
-      {children}
+            <div className="form-grid">
 
+              <div className="form-group">
+                <label className="form-label">
+                  First Name{" "}
+                  <span className="required">
+                    *
+                  </span>
+                </label>
+
+                <input
+                  className="form-input"
+                  type="text"
+                  name="firstName"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  placeholder="Enter first name"
+                  autoComplete="given-name"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Second Name{" "}
+                  <span className="required">
+                    *
+                  </span>
+                </label>
+
+                <input
+                  className="form-input"
+                  type="text"
+                  name="secondName"
+                  value={form.secondName}
+                  onChange={handleChange}
+                  placeholder="Enter second name"
+                  autoComplete="family-name"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Phone{" "}
+                  <span className="required">
+                    *
+                  </span>
+                </label>
+
+                <input
+                  className="form-input"
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="e.g. 0780000000"
+                  autoComplete="tel"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Email{" "}
+                  <span className="required">
+                    *
+                  </span>
+                </label>
+
+                <input
+                  className="form-input"
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="employee@example.com"
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="form-group full">
+                <label className="form-label">
+                  Password{" "}
+                  <span className="required">
+                    *
+                  </span>
+                </label>
+
+                <input
+                  className="form-input"
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Minimum 6 characters"
+                  autoComplete="new-password"
+                />
+
+                <div className="field-help">
+                  The employee will use this password when signing in.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ================================================== */}
+          {/* ORGANIZATION */}
+          {/* ================================================== */}
+
+          <section className="form-section">
+            <div className="section-heading">
+              <h2>Organization</h2>
+              <p>
+                Define where the employee belongs within ANTIMATE.
+              </p>
+            </div>
+
+            {loadingData ? (
+              <div className="loading-box">
+                Loading organization structure...
+              </div>
+            ) : (
+              <div className="form-grid three">
+
+                {/* DEPARTMENT */}
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Department{" "}
+                    <span className="required">
+                      *
+                    </span>
+                  </label>
+
+                  <select
+                    className="form-select"
+                    name="department"
+                    value={form.department}
+                    onChange={handleChange}
+                  >
+                    <option value="">
+                      Select department
+                    </option>
+
+                    {departments
+                      .filter(
+                        (department) =>
+                          department.active !== false
+                      )
+                      .map((department) => (
+                        <option
+                          key={department._id}
+                          value={department._id}
+                        >
+                          {department.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* POSITION */}
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Position{" "}
+                    <span className="required">
+                      *
+                    </span>
+                  </label>
+
+                  <select
+                    className="form-select"
+                    name="position"
+                    value={form.position}
+                    onChange={handleChange}
+                    disabled={
+                      !form.department
+                    }
+                  >
+                    <option value="">
+                      {!form.department
+                        ? "Select department first"
+                        : filteredPositions.length === 0
+                        ? "No positions available"
+                        : "Select position"}
+                    </option>
+
+                    {filteredPositions
+                      .filter(
+                        (position) =>
+                          position.active !== false
+                      )
+                      .map((position) => (
+                        <option
+                          key={position._id}
+                          value={position._id}
+                        >
+                          {position.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* TEAM */}
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Team{" "}
+                    <span className="required">
+                      *
+                    </span>
+                  </label>
+
+                  <select
+                    className="form-select"
+                    name="team"
+                    value={form.team}
+                    onChange={handleChange}
+                    disabled={
+                      !form.department
+                    }
+                  >
+                    <option value="">
+                      {!form.department
+                        ? "Select department first"
+                        : filteredTeams.length === 0
+                        ? "No teams available"
+                        : "Select team"}
+                    </option>
+
+                    {filteredTeams
+                      .filter(
+                        (team) =>
+                          team.active !== false
+                      )
+                      .map((team) => (
+                        <option
+                          key={team._id}
+                          value={team._id}
+                        >
+                          {team.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* MANAGER */}
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Manager
+                  </label>
+
+                  <select
+                    className="form-select"
+                    name="manager"
+                    value={form.manager}
+                    onChange={handleChange}
+                  >
+                    <option value="">
+                      No manager
+                    </option>
+
+                    {managers.map(
+                      (employee) => (
+                        <option
+                          key={employee._id}
+                          value={employee._id}
+                        >
+                          {employee.fullName ||
+                            `${employee.firstName || ""} ${employee.secondName || ""}`.trim()}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                {/* EMPLOYMENT TYPE */}
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Employment Type
+                  </label>
+
+                  <select
+                    className="form-select"
+                    name="employmentType"
+                    value={
+                      form.employmentType
+                    }
+                    onChange={handleChange}
+                  >
+                    <option value="full_time">
+                      Full Time
+                    </option>
+
+                    <option value="part_time">
+                      Part Time
+                    </option>
+
+                    <option value="contract">
+                      Contract
+                    </option>
+
+                    <option value="intern">
+                      Intern
+                    </option>
+
+                    <option value="volunteer">
+                      Volunteer
+                    </option>
+
+                    <option value="temporary">
+                      Temporary
+                    </option>
+                  </select>
+                </div>
+
+                {/* ACCESS LEVEL */}
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Access Level
+                  </label>
+
+                  <select
+                    className="form-select"
+                    name="accessLevel"
+                    value={
+                      form.accessLevel
+                    }
+                    onChange={handleChange}
+                  >
+                    <option value="staff">
+                      Staff
+                    </option>
+
+                    <option value="limited">
+                      Limited
+                    </option>
+
+                    <option value="manager">
+                      Manager
+                    </option>
+
+                    <option value="admin">
+                      Admin
+                    </option>
+
+                    <option value="superadmin">
+                      Superadmin
+                    </option>
+                  </select>
+
+                  <div className="field-help">
+                    Controls the employee's system access level.
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* ================================================== */}
+          {/* OTP */}
+          {/* ================================================== */}
+
+          <section className="form-section">
+            <div className="section-heading">
+              <h2>Phone Verification</h2>
+              <p>
+                Verify the employee's phone before creating the account.
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                Verification OTP{" "}
+                <span className="required">
+                  *
+                </span>
+              </label>
+
+              <div className="otp-row">
+                <input
+                  className="form-input"
+                  type="text"
+                  name="otp"
+                  value={form.otp}
+                  onChange={(event) => {
+                    const value =
+                      event.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 4);
+
+                    setForm((prev) => ({
+                      ...prev,
+                      otp: value,
+                    }));
+
+                    setError("");
+                    setMessage("");
+                  }}
+                  placeholder="Enter 4-digit OTP"
+                  inputMode="numeric"
+                  maxLength={4}
+                />
+
+                <button
+                  type="button"
+                  className="otp-button"
+                  onClick={
+                    handleSendOTP
+                  }
+                  disabled={
+                    sendingOTP ||
+                    !form.phone ||
+                    !form.email ||
+                    loadingData
+                  }
+                >
+                  {sendingOTP
+                    ? "Sending..."
+                    : otpSent
+                    ? "Resend OTP"
+                    : "Send OTP"}
+                </button>
+              </div>
+
+              {otpSent &&
+                otpExpiresIn > 0 && (
+                  <div className="otp-status">
+                    <span>
+                      OTP has been sent successfully.
+                    </span>
+
+                    <strong>
+                      {formatOTPTime()}
+                    </strong>
+                  </div>
+                )}
+
+              {!otpSent &&
+                form.phone &&
+                form.email && (
+                  <div className="field-help">
+                    Click "Send OTP" to send a verification code through the ANTIMATE Gateway.
+                  </div>
+                )}
+            </div>
+          </section>
+
+          {/* ================================================== */}
+          {/* ALERTS */}
+          {/* ================================================== */}
+
+          {error && (
+            <div className="alert alert-error">
+              {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="alert alert-success">
+              {message}
+            </div>
+          )}
+
+          {/* ================================================== */}
+          {/* FOOTER */}
+          {/* ================================================== */}
+
+          <div className="form-footer">
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={resetForm}
+              disabled={creating}
+            >
+              Clear
+            </button>
+
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={
+                creating ||
+                loadingData
+              }
+            >
+              {creating
+                ? "Creating Employee..."
+                : "Create Employee"}
+            </button>
+
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
