@@ -24,6 +24,9 @@ import {
 |--------------------------------------------------------------------------
 | ANTIMATE ADMIN — NAVBAR
 |--------------------------------------------------------------------------
+| Native CSS only
+| Mobile sidebar is controlled by .antimate-app.sidebar-open
+|--------------------------------------------------------------------------
 */
 
 export default function Navbar() {
@@ -62,9 +65,22 @@ export default function Navbar() {
     );
   };
 
+  const closeSidebar = () => {
+    const app =
+      document.querySelector(
+        ".antimate-app"
+      );
+
+    if (!app) return;
+
+    app.classList.remove(
+      "sidebar-open"
+    );
+  };
+
   /*
   |--------------------------------------------------------------------------
-  | CLOSE LANGUAGE MENU
+  | CLOSE MENUS
   |--------------------------------------------------------------------------
   */
 
@@ -72,6 +88,7 @@ export default function Navbar() {
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setLanguageOpen(false);
+        closeSidebar();
       }
     };
 
@@ -90,7 +107,7 @@ export default function Navbar() {
 
   /*
   |--------------------------------------------------------------------------
-  | CHANGE LANGUAGE
+  | LANGUAGE
   |--------------------------------------------------------------------------
   */
 
@@ -106,19 +123,37 @@ export default function Navbar() {
   */
 
   const adminName =
-    admin?.name ||
     admin?.fullName ||
+    admin?.name ||
+    `${admin?.firstName || ""} ${
+      admin?.secondName || ""
+    }`.trim() ||
     admin?.username ||
     t("admin");
 
   const adminEmail =
-    admin?.email ||
-    "";
+    admin?.email || "";
 
   const initial =
     adminName
       .charAt(0)
       .toUpperCase();
+
+  /*
+  |--------------------------------------------------------------------------
+  | NAVIGATION
+  |--------------------------------------------------------------------------
+  */
+
+  const goToDashboard = () => {
+    closeSidebar();
+    navigate("/dashboard");
+  };
+
+  const goToSettings = () => {
+    closeSidebar();
+    navigate("/settings");
+  };
 
   /*
   |--------------------------------------------------------------------------
@@ -135,12 +170,12 @@ export default function Navbar() {
 
       <div className="antimate-navbar-left">
 
-        {/* Mobile menu */}
         <button
           type="button"
           className="antimate-mobile-menu"
           onClick={toggleSidebar}
           aria-label={t("openMenu")}
+          aria-controls="antimate-sidebar"
         >
           <Menu size={20} />
         </button>
@@ -148,11 +183,8 @@ export default function Navbar() {
         <button
           type="button"
           className="antimate-navbar-brand"
-          onClick={() =>
-            navigate("/dashboard")
-          }
+          onClick={goToDashboard}
         >
-
           <span className="antimate-navbar-title">
             ANTIMATE ADMIN
           </span>
@@ -160,7 +192,6 @@ export default function Navbar() {
           <span className="antimate-navbar-subtitle">
             {t("platform")}
           </span>
-
         </button>
 
       </div>
@@ -189,7 +220,6 @@ export default function Navbar() {
               languageOpen
             }
           >
-
             <Globe2 size={17} />
 
             <span className="antimate-language-code">
@@ -206,19 +236,15 @@ export default function Navbar() {
                   : ""
               }
             />
-
           </button>
 
           {languageOpen && (
             <>
-
               <button
                 type="button"
                 className="antimate-menu-backdrop"
                 onClick={() =>
-                  setLanguageOpen(
-                    false
-                  )
+                  setLanguageOpen(false)
                 }
                 aria-label={
                   t("closeMenu")
@@ -242,7 +268,6 @@ export default function Navbar() {
                     changeLanguage("en")
                   }
                 >
-
                   <span>
                     🇬🇧 {t("english")}
                   </span>
@@ -250,7 +275,6 @@ export default function Navbar() {
                   {language === "en" && (
                     <span>✓</span>
                   )}
-
                 </button>
 
                 <button
@@ -264,7 +288,6 @@ export default function Navbar() {
                     changeLanguage("rw")
                   }
                 >
-
                   <span>
                     🇷🇼 {t("kinyarwanda")}
                   </span>
@@ -272,11 +295,9 @@ export default function Navbar() {
                   {language === "rw" && (
                     <span>✓</span>
                   )}
-
                 </button>
 
               </div>
-
             </>
           )}
 
@@ -301,13 +322,11 @@ export default function Navbar() {
               : t("dark")
           }
         >
-
           {theme === "dark" ? (
             <Sun size={18} />
           ) : (
             <Moon size={18} />
           )}
-
         </button>
 
         {/* ==========================================================
@@ -323,11 +342,8 @@ export default function Navbar() {
         <button
           type="button"
           className="antimate-navbar-user"
-          onClick={() =>
-            navigate("/settings")
-          }
+          onClick={goToSettings}
         >
-
           <span className="antimate-navbar-avatar">
             {initial}
           </span>
@@ -343,7 +359,6 @@ export default function Navbar() {
             </span>
 
           </span>
-
         </button>
 
       </div>
@@ -362,11 +377,9 @@ export default function Navbar() {
           width: 100%;
           height: 100%;
 
-          padding:
-            0 26px;
+          padding: 0 26px;
 
-          color:
-            var(--admin-text);
+          color: var(--admin-text);
         }
 
         /* ============================================================
@@ -439,6 +452,8 @@ export default function Navbar() {
             var(--admin-text-secondary);
 
           cursor: pointer;
+
+          flex-shrink: 0;
         }
 
         .antimate-mobile-menu:hover {
@@ -479,8 +494,7 @@ export default function Navbar() {
 
           height: 36px;
 
-          padding:
-            0 9px;
+          padding: 0 9px;
 
           border:
             1px solid transparent;
@@ -517,7 +531,7 @@ export default function Navbar() {
         }
 
         /* ============================================================
-           MENU
+           LANGUAGE MENU
            ============================================================ */
 
         .antimate-menu-backdrop {
@@ -583,8 +597,7 @@ export default function Navbar() {
           width: 100%;
           min-height: 38px;
 
-          padding:
-            0 9px;
+          padding: 0 9px;
 
           border-radius: 7px;
 
@@ -657,8 +670,7 @@ export default function Navbar() {
           width: 1px;
           height: 28px;
 
-          margin:
-            0 5px;
+          margin: 0 5px;
 
           background:
             var(--admin-border);
@@ -758,8 +770,7 @@ export default function Navbar() {
         @media (max-width: 900px) {
 
           .antimate-navbar {
-            padding:
-              0 19px;
+            padding: 0 19px;
           }
 
           .antimate-navbar-subtitle {
@@ -779,8 +790,7 @@ export default function Navbar() {
         @media (max-width: 768px) {
 
           .antimate-navbar {
-            padding:
-              0 13px;
+            padding: 0 13px;
           }
 
           .antimate-mobile-menu {
@@ -827,8 +837,7 @@ export default function Navbar() {
         @media (max-width: 430px) {
 
           .antimate-navbar {
-            padding:
-              0 9px;
+            padding: 0 9px;
           }
 
           .antimate-navbar-left {

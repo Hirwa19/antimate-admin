@@ -1,4 +1,5 @@
 import React from "react";
+
 import {
   LayoutDashboard,
   Cpu,
@@ -10,6 +11,7 @@ import {
   Radio,
   Building2,
 } from "lucide-react";
+
 import {
   useNavigate,
   useLocation,
@@ -28,27 +30,9 @@ export default function Sidebar() {
     hasPermission,
   } = useAuth();
 
-  const settings = useAppSettings();
-
   const {
     t,
-    theme,
-  } = settings;
-
-  /*
-  ============================================================
-  THEME
-  ============================================================
-  */
-
-  const currentTheme =
-    theme || "light";
-
-  /*
-  ============================================================
-  TRANSLATION HELPER
-  ============================================================
-  */
+  } = useAppSettings();
 
   const translate = (
     key,
@@ -63,9 +47,9 @@ export default function Sidebar() {
   };
 
   /*
-  ============================================================
-  MENU
-  ============================================================
+  |--------------------------------------------------------------------------
+  | MENU
+  |--------------------------------------------------------------------------
   */
 
   const menuItems = [
@@ -153,9 +137,9 @@ export default function Sidebar() {
   ];
 
   /*
-  ============================================================
-  FILTER MENU BY BACKEND PERMISSIONS
-  ============================================================
+  |--------------------------------------------------------------------------
+  | PERMISSION FILTER
+  |--------------------------------------------------------------------------
   */
 
   const visibleMenuItems =
@@ -172,9 +156,9 @@ export default function Sidebar() {
     );
 
   /*
-  ============================================================
-  ACTIVE PATH
-  ============================================================
+  |--------------------------------------------------------------------------
+  | ACTIVE PAGE
+  |--------------------------------------------------------------------------
   */
 
   const isActive = (path) => {
@@ -196,29 +180,39 @@ export default function Sidebar() {
   };
 
   /*
-  ============================================================
-  NAVIGATION
-  ============================================================
+  |--------------------------------------------------------------------------
+  | NAVIGATION
+  |--------------------------------------------------------------------------
   */
 
   const goTo = (path) => {
     navigate(path);
 
-    document.body.classList.remove(
+    const app =
+      document.querySelector(
+        ".antimate-app"
+      );
+
+    app?.classList.remove(
       "sidebar-open"
     );
   };
 
   /*
-  ============================================================
-  LOGOUT
-  ============================================================
+  |--------------------------------------------------------------------------
+  | LOGOUT
+  |--------------------------------------------------------------------------
   */
 
   const handleLogout = () => {
     logout();
 
-    document.body.classList.remove(
+    const app =
+      document.querySelector(
+        ".antimate-app"
+      );
+
+    app?.classList.remove(
       "sidebar-open"
     );
 
@@ -228,9 +222,9 @@ export default function Sidebar() {
   };
 
   /*
-  ============================================================
-  ADMIN NAME
-  ============================================================
+  |--------------------------------------------------------------------------
+  | ADMIN
+  |--------------------------------------------------------------------------
   */
 
   const adminName =
@@ -244,12 +238,6 @@ export default function Sidebar() {
       "admin",
       "Administrator"
     );
-
-  /*
-  ============================================================
-  ACCESS LEVEL
-  ============================================================
-  */
 
   const accessLevel =
     admin?.accessLevel ||
@@ -288,32 +276,28 @@ export default function Sidebar() {
     ] ||
     accessLevel;
 
-  /*
-  ============================================================
-  INITIAL
-  ============================================================
-  */
-
   const adminInitial =
     adminName
       .charAt(0)
       .toUpperCase();
 
   /*
-  ============================================================
-  UI
-  ============================================================
+  |--------------------------------------------------------------------------
+  | RENDER
+  |--------------------------------------------------------------------------
   */
 
   return (
-    <aside
-      className={`antimate-sidebar antimate-sidebar-${currentTheme}`}
+    <div
+      id="antimate-sidebar"
+      className="antimate-sidebar"
     >
+
       <div className="antimate-sidebar-inner">
 
-        {/* ==================================================
+        {/* ==========================================================
             BRAND
-        ================================================== */}
+            ========================================================== */}
 
         <button
           type="button"
@@ -338,16 +322,18 @@ export default function Sidebar() {
           </div>
         </button>
 
-        {/* ==================================================
+        {/* ==========================================================
             USER
-        ================================================== */}
+            ========================================================== */}
 
         <div className="sidebar-user">
+
           <div className="sidebar-user-avatar">
             {adminInitial}
           </div>
 
           <div className="sidebar-user-info">
+
             <strong>
               {adminName}
             </strong>
@@ -355,12 +341,14 @@ export default function Sidebar() {
             <span>
               {accessLabel}
             </span>
+
           </div>
+
         </div>
 
-        {/* ==================================================
+        {/* ==========================================================
             NAVIGATION
-        ================================================== */}
+            ========================================================== */}
 
         <nav
           className="sidebar-navigation"
@@ -369,6 +357,7 @@ export default function Sidebar() {
             "Administration"
           )}
         >
+
           <div className="sidebar-section-title">
             {translate(
               "administration",
@@ -401,6 +390,7 @@ export default function Sidebar() {
                     )
                   }
                 >
+
                   <Icon
                     size={18}
                     strokeWidth={2}
@@ -415,17 +405,20 @@ export default function Sidebar() {
                     className="sidebar-nav-arrow"
                     strokeWidth={2}
                   />
+
                 </button>
               );
             }
           )}
+
         </nav>
 
-        {/* ==================================================
+        {/* ==========================================================
             FOOTER
-        ================================================== */}
+            ========================================================== */}
 
         <div className="sidebar-footer">
+
           <button
             type="button"
             className="sidebar-logout"
@@ -433,6 +426,7 @@ export default function Sidebar() {
               handleLogout
             }
           >
+
             <LogOut
               size={18}
               strokeWidth={2}
@@ -444,70 +438,79 @@ export default function Sidebar() {
                 "Logout"
               )}
             </span>
+
           </button>
+
         </div>
+
       </div>
 
       <style>{`
 
-        /* ====================================================
-           ROOT
-        ==================================================== */
+        /*
+        |--------------------------------------------------------------------------
+        | SIDEBAR
+        |--------------------------------------------------------------------------
+        */
 
         .antimate-sidebar {
-          --sidebar-bg: var(--app-bg, #ffffff);
-          --sidebar-surface: var(--app-surface, #ffffff);
-          --sidebar-border: var(--app-border, #e5e7eb);
-          --sidebar-text: var(--app-text, #171a21);
-          --sidebar-muted: var(--app-muted, #6b7280);
-          --sidebar-hover: var(--app-hover, #f5f6f8);
-          --sidebar-active: var(--app-primary-soft, #eef0ff);
-          --sidebar-primary: var(--app-primary, #5961d9);
+          --sidebar-bg:
+            var(--admin-surface, #ffffff);
 
-          width: 260px;
-          min-width: 260px;
-          height: 100vh;
+          --sidebar-surface:
+            var(--admin-surface, #ffffff);
 
-          background: var(--sidebar-bg);
+          --sidebar-border:
+            var(--admin-border, #e5e7eb);
 
-          border-right: 1px solid
-            var(--sidebar-border);
+          --sidebar-text:
+            var(--admin-text, #171a21);
 
-          position: fixed;
+          --sidebar-muted:
+            var(--admin-text-muted, #64748b);
 
-          left: 0;
-          top: 0;
-          bottom: 0;
+          --sidebar-hover:
+            var(--admin-surface-2, #f1f5f9);
 
-          z-index: 1000;
+          --sidebar-active:
+            rgba(89, 97, 217, 0.10);
 
-          color: var(--sidebar-text);
+          --sidebar-primary:
+            var(--admin-primary, #5961d9);
 
-          transition:
-            background-color 0.2s ease,
-            border-color 0.2s ease,
-            color 0.2s ease,
-            transform 0.25s ease;
-        }
-
-        /* ====================================================
-           INNER
-        ==================================================== */
-
-        .antimate-sidebar-inner {
+          width: 100%;
           height: 100%;
 
+          background:
+            var(--sidebar-bg);
+
+          color:
+            var(--sidebar-text);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | INNER
+        |--------------------------------------------------------------------------
+        */
+
+        .antimate-sidebar-inner {
           display: flex;
           flex-direction: column;
 
+          width: 100%;
+          height: 100%;
+
           padding: 18px 13px;
 
-          box-sizing: border-box;
+          overflow: hidden;
         }
 
-        /* ====================================================
-           BRAND
-        ==================================================== */
+        /*
+        |--------------------------------------------------------------------------
+        | BRAND
+        |--------------------------------------------------------------------------
+        */
 
         .sidebar-brand {
           width: 100%;
@@ -520,6 +523,7 @@ export default function Sidebar() {
           padding: 5px 8px 19px;
 
           border: 0;
+
           background: transparent;
 
           color: inherit;
@@ -543,7 +547,8 @@ export default function Sidebar() {
 
           border-radius: 10px;
 
-          background: var(--sidebar-primary);
+          background:
+            var(--sidebar-primary);
 
           color: #ffffff;
 
@@ -563,18 +568,20 @@ export default function Sidebar() {
         }
 
         .sidebar-brand-text strong {
-          color: var(--sidebar-text);
+          color:
+            var(--sidebar-text);
 
           font-size: 16px;
           font-weight: 800;
 
-          letter-spacing: 0.25px;
+          letter-spacing: .25px;
         }
 
         .sidebar-brand-text span {
           margin-top: 5px;
 
-          color: var(--sidebar-muted);
+          color:
+            var(--sidebar-muted);
 
           font-size: 9px;
           font-weight: 700;
@@ -582,9 +589,11 @@ export default function Sidebar() {
           letter-spacing: 1.6px;
         }
 
-        /* ====================================================
-           USER
-        ==================================================== */
+        /*
+        |--------------------------------------------------------------------------
+        | USER
+        |--------------------------------------------------------------------------
+        */
 
         .sidebar-user {
           min-width: 0;
@@ -598,14 +607,13 @@ export default function Sidebar() {
 
           margin-bottom: 18px;
 
-          background: var(--sidebar-surface);
+          background:
+            var(--sidebar-surface);
 
-          border: 1px solid
-            var(--sidebar-border);
+          border:
+            1px solid var(--sidebar-border);
 
           border-radius: 11px;
-
-          box-sizing: border-box;
         }
 
         .sidebar-user-avatar {
@@ -620,9 +628,11 @@ export default function Sidebar() {
 
           border-radius: 50%;
 
-          background: var(--sidebar-active);
+          background:
+            var(--sidebar-active);
 
-          color: var(--sidebar-primary);
+          color:
+            var(--sidebar-primary);
 
           font-size: 14px;
           font-weight: 800;
@@ -640,7 +650,8 @@ export default function Sidebar() {
 
           overflow: hidden;
 
-          color: var(--sidebar-text);
+          color:
+            var(--sidebar-text);
 
           font-size: 13px;
           font-weight: 700;
@@ -648,13 +659,15 @@ export default function Sidebar() {
           line-height: 1.25;
 
           white-space: nowrap;
+
           text-overflow: ellipsis;
         }
 
         .sidebar-user-info span {
           margin-top: 3px;
 
-          color: var(--sidebar-muted);
+          color:
+            var(--sidebar-muted);
 
           font-size: 10.5px;
           font-weight: 500;
@@ -662,13 +675,17 @@ export default function Sidebar() {
           line-height: 1.2;
 
           white-space: nowrap;
+
           overflow: hidden;
+
           text-overflow: ellipsis;
         }
 
-        /* ====================================================
-           NAVIGATION
-        ==================================================== */
+        /*
+        |--------------------------------------------------------------------------
+        | NAVIGATION
+        |--------------------------------------------------------------------------
+        */
 
         .sidebar-navigation {
           flex: 1;
@@ -677,18 +694,22 @@ export default function Sidebar() {
 
           overflow-y: auto;
 
+          overflow-x: hidden;
+
           scrollbar-width: thin;
         }
 
         .sidebar-section-title {
-          padding: 0 10px 8px;
+          padding:
+            0 10px 8px;
 
-          color: var(--sidebar-muted);
+          color:
+            var(--sidebar-muted);
 
           font-size: 10px;
           font-weight: 700;
 
-          letter-spacing: 0.9px;
+          letter-spacing: .9px;
 
           text-transform: uppercase;
         }
@@ -705,14 +726,17 @@ export default function Sidebar() {
 
           margin-bottom: 3px;
 
-          padding: 10px 11px;
+          padding:
+            10px 11px;
 
           border: 0;
+
           border-radius: 9px;
 
           background: transparent;
 
-          color: var(--sidebar-muted);
+          color:
+            var(--sidebar-muted);
 
           cursor: pointer;
 
@@ -726,26 +750,32 @@ export default function Sidebar() {
           box-sizing: border-box;
 
           transition:
-            background-color 0.16s ease,
-            color 0.16s ease;
+            background-color .16s ease,
+            color .16s ease;
         }
 
         .sidebar-nav-item:hover {
-          background: var(--sidebar-hover);
+          background:
+            var(--sidebar-hover);
 
-          color: var(--sidebar-text);
+          color:
+            var(--sidebar-text);
         }
 
         .sidebar-nav-item-active {
-          background: var(--sidebar-active);
+          background:
+            var(--sidebar-active);
 
-          color: var(--sidebar-primary);
+          color:
+            var(--sidebar-primary);
         }
 
         .sidebar-nav-item-active:hover {
-          background: var(--sidebar-active);
+          background:
+            var(--sidebar-active);
 
-          color: var(--sidebar-primary);
+          color:
+            var(--sidebar-primary);
         }
 
         .sidebar-nav-item span {
@@ -763,36 +793,39 @@ export default function Sidebar() {
 
           flex-shrink: 0;
 
-          opacity: 0.4;
+          opacity: .4;
 
           transition:
-            transform 0.16s ease,
-            opacity 0.16s ease;
+            transform .16s ease,
+            opacity .16s ease;
         }
 
         .sidebar-nav-item:hover
           .sidebar-nav-arrow {
-          opacity: 0.7;
+          opacity: .7;
 
-          transform: translateX(1px);
+          transform:
+            translateX(1px);
         }
 
         .sidebar-nav-item-active
           .sidebar-nav-arrow {
-          opacity: 0.65;
+          opacity: .65;
         }
 
-        /* ====================================================
-           FOOTER
-        ==================================================== */
+        /*
+        |--------------------------------------------------------------------------
+        | FOOTER
+        |--------------------------------------------------------------------------
+        */
 
         .sidebar-footer {
           padding-top: 12px;
 
           margin-top: 10px;
 
-          border-top: 1px solid
-            var(--sidebar-border);
+          border-top:
+            1px solid var(--sidebar-border);
         }
 
         .sidebar-logout {
@@ -805,14 +838,17 @@ export default function Sidebar() {
 
           gap: 11px;
 
-          padding: 10px 11px;
+          padding:
+            10px 11px;
 
           border: 0;
+
           border-radius: 9px;
 
           background: transparent;
 
-          color: var(--sidebar-muted);
+          color:
+            var(--sidebar-muted);
 
           cursor: pointer;
 
@@ -824,80 +860,102 @@ export default function Sidebar() {
           text-align: left;
 
           transition:
-            background-color 0.16s ease,
-            color 0.16s ease;
+            background-color .16s ease,
+            color .16s ease;
         }
 
         .sidebar-logout:hover {
-          background: var(--sidebar-hover);
+          background:
+            var(--sidebar-hover);
 
-          color: var(--sidebar-text);
+          color:
+            var(--sidebar-text);
         }
 
-        /* ====================================================
-           DARK THEME FALLBACK
-        ==================================================== */
+        /*
+        |--------------------------------------------------------------------------
+        | DARK THEME
+        |--------------------------------------------------------------------------
+        */
 
-        .antimate-sidebar-dark {
+        [data-theme="dark"]
+        .antimate-sidebar {
           --sidebar-bg:
-            var(--app-bg, #101218);
+            var(--admin-surface, #0f172a);
 
           --sidebar-surface:
-            var(--app-surface, #171922);
+            var(--admin-surface-2, #111827);
 
           --sidebar-border:
-            var(--app-border, #292d38);
+            var(--admin-border, rgba(148,163,184,.15));
 
           --sidebar-text:
-            var(--app-text, #f3f4f6);
+            var(--admin-text, #f8fafc);
 
           --sidebar-muted:
-            var(--app-muted, #9ca3af);
+            var(--admin-text-muted, #94a3b8);
 
           --sidebar-hover:
-            var(--app-hover, #20232d);
+            var(--admin-surface-3, #1e293b);
 
           --sidebar-active:
-            var(--app-primary-soft, #25284a);
+            rgba(99, 102, 241, .16);
 
           --sidebar-primary:
-            var(--app-primary, #777ff0);
+            var(--admin-primary, #38bdf8);
         }
 
-        /* ====================================================
-           RESPONSIVE
-        ==================================================== */
+        /*
+        |--------------------------------------------------------------------------
+        | MOBILE
+        |--------------------------------------------------------------------------
+        */
 
-        @media (max-width: 900px) {
-          .antimate-sidebar {
-            transform: translateX(-100%);
-
-            box-shadow: none;
-          }
-
-          body.sidebar-open
-            .antimate-sidebar {
-            transform: translateX(0);
-
-            box-shadow:
-              12px 0 35px
-              rgba(0, 0, 0, 0.12);
-          }
-        }
-
-        @media (max-width: 480px) {
-          .antimate-sidebar {
-            width: 280px;
-            min-width: 280px;
-          }
+        @media (max-width: 768px) {
 
           .antimate-sidebar-inner {
             padding:
-              16px 12px;
+              16px 13px;
           }
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SMALL PHONE
+        |--------------------------------------------------------------------------
+        */
+
+        @media (max-width: 430px) {
+
+          .antimate-sidebar-inner {
+            padding:
+              15px 12px;
+          }
+
+          .sidebar-brand {
+            padding-bottom: 16px;
+          }
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | REDUCED MOTION
+        |--------------------------------------------------------------------------
+        */
+
+        @media (prefers-reduced-motion: reduce) {
+
+          .sidebar-nav-item,
+          .sidebar-nav-arrow,
+          .sidebar-logout {
+            transition: none;
+          }
+
         }
 
       `}</style>
-    </aside>
+    </div>
   );
 }

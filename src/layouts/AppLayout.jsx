@@ -7,34 +7,67 @@ import Navbar from "../components/Navbar";
 | ANTIMATE ADMIN — APP LAYOUT
 |--------------------------------------------------------------------------
 | Native CSS only
+| Desktop + responsive mobile sidebar
 |--------------------------------------------------------------------------
 */
 
-export default function AppLayout({ children }) {
+export default function AppLayout({
+  children,
+}) {
+  const closeSidebar = () => {
+    const app =
+      document.querySelector(
+        ".antimate-app"
+      );
+
+    app?.classList.remove(
+      "sidebar-open"
+    );
+  };
+
   return (
     <>
       <div className="antimate-app">
 
-        {/* Sidebar */}
-        <aside className="antimate-sidebar-shell">
+        {/* ==========================================================
+            SIDEBAR
+            ========================================================== */}
+
+        <aside
+          className="antimate-sidebar-shell"
+        >
           <Sidebar />
         </aside>
 
-        {/* Mobile overlay */}
-        <div
+        {/* ==========================================================
+            MOBILE OVERLAY
+            ========================================================== */}
+
+        <button
+          type="button"
           className="antimate-sidebar-overlay"
-          aria-hidden="true"
+          onClick={closeSidebar}
+          aria-label="Close sidebar"
         />
 
-        {/* Main application */}
+        {/* ==========================================================
+            MAIN APPLICATION
+            ========================================================== */}
+
         <div className="antimate-app-body">
 
-          {/* Persistent Navbar */}
+          {/* ========================================================
+              NAVBAR
+              ======================================================== */}
+
           <header className="antimate-navbar-shell">
             <Navbar />
           </header>
 
-          {/* Page */}
+          {/* ========================================================
+              PAGE
+              ======================================================== */}
+
           <main className="antimate-main">
             <div className="antimate-content">
               {children}
@@ -61,6 +94,7 @@ export default function AppLayout({ children }) {
         #root {
           margin: 0;
           padding: 0;
+
           width: 100%;
           min-height: 100%;
         }
@@ -75,11 +109,19 @@ export default function AppLayout({ children }) {
             "Segoe UI",
             sans-serif;
 
-          background: var(--admin-bg);
-          color: var(--admin-text);
+          background:
+            var(--admin-bg);
 
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
+          color:
+            var(--admin-text);
+
+          -webkit-font-smoothing:
+            antialiased;
+
+          text-rendering:
+            optimizeLegibility;
+
+          overflow-x: hidden;
         }
 
         button,
@@ -98,10 +140,17 @@ export default function AppLayout({ children }) {
            ============================================================ */
 
         :root {
-          --admin-bg: #020617;
-          --admin-surface: #0f172a;
-          --admin-surface-2: #111827;
-          --admin-surface-3: #1e293b;
+          --admin-bg:
+            #020617;
+
+          --admin-surface:
+            #0f172a;
+
+          --admin-surface-2:
+            #111827;
+
+          --admin-surface-3:
+            #1e293b;
 
           --admin-border:
             rgba(148, 163, 184, 0.15);
@@ -109,35 +158,69 @@ export default function AppLayout({ children }) {
           --admin-border-strong:
             rgba(148, 163, 184, 0.25);
 
-          --admin-text: #f8fafc;
-          --admin-text-secondary: #cbd5e1;
-          --admin-text-muted: #94a3b8;
+          --admin-text:
+            #f8fafc;
 
-          --admin-primary: #38bdf8;
-          --admin-primary-hover: #0ea5e9;
+          --admin-text-secondary:
+            #cbd5e1;
 
-          --admin-success: #22c55e;
-          --admin-warning: #f59e0b;
-          --admin-danger: #ef4444;
+          --admin-text-muted:
+            #94a3b8;
 
-          --admin-navbar-height: 68px;
-          --admin-sidebar-width: 250px;
+          --admin-primary:
+            #38bdf8;
 
-          --admin-content-max-width: 1600px;
+          --admin-primary-hover:
+            #0ea5e9;
 
-          --admin-radius-sm: 6px;
-          --admin-radius-md: 9px;
-          --admin-radius-lg: 12px;
+          --admin-success:
+            #22c55e;
+
+          --admin-warning:
+            #f59e0b;
+
+          --admin-danger:
+            #ef4444;
+
+          --admin-navbar-height:
+            68px;
+
+          --admin-sidebar-width:
+            250px;
+
+          --admin-content-max-width:
+            1600px;
+
+          --admin-radius-sm:
+            6px;
+
+          --admin-radius-md:
+            9px;
+
+          --admin-radius-lg:
+            12px;
 
           --admin-shadow:
-            0 12px 35px rgba(0, 0, 0, .22);
+            0 12px 35px
+            rgba(0, 0, 0, .22);
         }
 
+        /* ============================================================
+           LIGHT THEME
+           ============================================================ */
+
         [data-theme="light"] {
-          --admin-bg: #f8fafc;
-          --admin-surface: #ffffff;
-          --admin-surface-2: #f1f5f9;
-          --admin-surface-3: #e2e8f0;
+          --admin-bg:
+            #f8fafc;
+
+          --admin-surface:
+            #ffffff;
+
+          --admin-surface-2:
+            #f1f5f9;
+
+          --admin-surface-3:
+            #e2e8f0;
 
           --admin-border:
             rgba(15, 23, 42, 0.10);
@@ -145,12 +228,67 @@ export default function AppLayout({ children }) {
           --admin-border-strong:
             rgba(15, 23, 42, 0.18);
 
-          --admin-text: #0f172a;
-          --admin-text-secondary: #334155;
-          --admin-text-muted: #64748b;
+          --admin-text:
+            #0f172a;
+
+          --admin-text-secondary:
+            #334155;
+
+          --admin-text-muted:
+            #64748b;
+
+          --admin-primary:
+            #5961d9;
+
+          --admin-primary-hover:
+            #4f46c5;
 
           --admin-shadow:
-            0 12px 35px rgba(15, 23, 42, .10);
+            0 12px 35px
+            rgba(15, 23, 42, .10);
+        }
+
+        /* ============================================================
+           DARK THEME
+           ============================================================ */
+
+        [data-theme="dark"] {
+          --admin-bg:
+            #020617;
+
+          --admin-surface:
+            #0f172a;
+
+          --admin-surface-2:
+            #111827;
+
+          --admin-surface-3:
+            #1e293b;
+
+          --admin-border:
+            rgba(148, 163, 184, 0.15);
+
+          --admin-border-strong:
+            rgba(148, 163, 184, 0.25);
+
+          --admin-text:
+            #f8fafc;
+
+          --admin-text-secondary:
+            #cbd5e1;
+
+          --admin-text-muted:
+            #94a3b8;
+
+          --admin-primary:
+            #38bdf8;
+
+          --admin-primary-hover:
+            #0ea5e9;
+
+          --admin-shadow:
+            0 12px 35px
+            rgba(0, 0, 0, .22);
         }
 
         /* ============================================================
@@ -186,8 +324,9 @@ export default function AppLayout({ children }) {
           width:
             var(--admin-sidebar-width);
 
-          overflow-y: auto;
-          overflow-x: hidden;
+          height: 100vh;
+
+          overflow: hidden;
 
           background:
             var(--admin-surface);
@@ -195,11 +334,16 @@ export default function AppLayout({ children }) {
           border-right:
             1px solid var(--admin-border);
 
-          scrollbar-width: thin;
+          transition:
+            transform 220ms ease,
+            background-color 200ms ease,
+            border-color 200ms ease;
+
+          flex-shrink: 0;
         }
 
         /* ============================================================
-           BODY
+           MAIN BODY
            ============================================================ */
 
         .antimate-app-body {
@@ -212,6 +356,12 @@ export default function AppLayout({ children }) {
 
           margin-left:
             var(--admin-sidebar-width);
+
+          background:
+            var(--admin-bg);
+
+          transition:
+            margin-left 200ms ease;
         }
 
         /* ============================================================
@@ -224,6 +374,8 @@ export default function AppLayout({ children }) {
           top: 0;
 
           z-index: 90;
+
+          width: 100%;
 
           height:
             var(--admin-navbar-height);
@@ -267,6 +419,7 @@ export default function AppLayout({ children }) {
 
         .antimate-content {
           width: 100%;
+
           max-width:
             var(--admin-content-max-width);
 
@@ -287,8 +440,26 @@ export default function AppLayout({ children }) {
 
           z-index: 95;
 
+          width: 100%;
+          height: 100%;
+
+          padding: 0;
+
+          margin: 0;
+
+          border: 0;
+
           background:
             rgba(0, 0, 0, .58);
+
+          cursor: pointer;
+
+          opacity: 0;
+
+          pointer-events: none;
+
+          transition:
+            opacity 220ms ease;
         }
 
         /* ============================================================
@@ -314,22 +485,26 @@ export default function AppLayout({ children }) {
           margin: 0;
 
           font-size: 24px;
+
           line-height: 1.25;
 
           font-weight: 700;
 
-          letter-spacing: -.02em;
+          letter-spacing:
+            -.02em;
 
           color:
             var(--admin-text);
         }
 
         .antimate-page-description {
-          margin: 7px 0 0;
+          margin:
+            7px 0 0;
 
           max-width: 720px;
 
           font-size: 14px;
+
           line-height: 1.6;
 
           color:
@@ -352,6 +527,7 @@ export default function AppLayout({ children }) {
           align-items: center;
 
           width: 100%;
+
           min-height: 62px;
 
           border-bottom:
@@ -370,11 +546,14 @@ export default function AppLayout({ children }) {
           min-height: 44px;
 
           font-size: 11px;
+
           font-weight: 700;
 
-          text-transform: uppercase;
+          text-transform:
+            uppercase;
 
-          letter-spacing: .05em;
+          letter-spacing:
+            .05em;
 
           color:
             var(--admin-text-muted);
@@ -388,9 +567,11 @@ export default function AppLayout({ children }) {
 
           overflow: hidden;
 
-          text-overflow: ellipsis;
+          text-overflow:
+            ellipsis;
 
-          white-space: nowrap;
+          white-space:
+            nowrap;
         }
 
         /* ============================================================
@@ -416,13 +597,14 @@ export default function AppLayout({ children }) {
         }
 
         /* ============================================================
-           RESPONSIVE
+           TABLET
            ============================================================ */
 
         @media (max-width: 1100px) {
 
           :root {
-            --admin-sidebar-width: 220px;
+            --admin-sidebar-width:
+              220px;
           }
 
           .antimate-main {
@@ -434,51 +616,97 @@ export default function AppLayout({ children }) {
 
         }
 
+        /* ============================================================
+           MOBILE
+           ============================================================ */
+
         @media (max-width: 768px) {
 
           :root {
-            --admin-navbar-height: 60px;
+            --admin-navbar-height:
+              60px;
           }
+
+          /* ----------------------------------------------------------
+             SIDEBAR
+             ---------------------------------------------------------- */
 
           .antimate-sidebar-shell {
             width: 270px;
 
+            height: 100dvh;
+
             transform:
               translateX(-100%);
 
-            transition:
-              transform 220ms ease;
-
             box-shadow:
-              var(--admin-shadow);
+              none;
+
+            will-change:
+              transform;
           }
 
           .antimate-app.sidebar-open
           .antimate-sidebar-shell {
             transform:
               translateX(0);
+
+            box-shadow:
+              12px 0 35px
+              rgba(0, 0, 0, .18);
+          }
+
+          /* ----------------------------------------------------------
+             OVERLAY
+             ---------------------------------------------------------- */
+
+          .antimate-sidebar-overlay {
+            display: block;
+
+            opacity: 0;
+
+            pointer-events: none;
           }
 
           .antimate-app.sidebar-open
           .antimate-sidebar-overlay {
-            display: block;
+            opacity: 1;
+
+            pointer-events: auto;
           }
+
+          /* ----------------------------------------------------------
+             BODY
+             ---------------------------------------------------------- */
 
           .antimate-app-body {
             margin-left: 0;
 
+            width: 100%;
+
             min-height: 100dvh;
           }
 
+          /* ----------------------------------------------------------
+             MAIN
+             ---------------------------------------------------------- */
+
           .antimate-main {
+            width: 100%;
+
             padding:
               20px
               16px
               32px;
           }
 
+          /* ----------------------------------------------------------
+             PAGE HEADER
+             ---------------------------------------------------------- */
+
           .antimate-page-header {
             flex-direction: column;
+
             align-items: stretch;
           }
 
@@ -486,8 +714,13 @@ export default function AppLayout({ children }) {
             font-size: 20px;
           }
 
+          /* ----------------------------------------------------------
+             TOOLBAR
+             ---------------------------------------------------------- */
+
           .antimate-toolbar {
             flex-direction: column;
+
             align-items: stretch;
           }
 
@@ -495,6 +728,10 @@ export default function AppLayout({ children }) {
           .antimate-toolbar-right {
             width: 100%;
           }
+
+          /* ----------------------------------------------------------
+             LIST
+             ---------------------------------------------------------- */
 
           .antimate-list {
             overflow-x: auto;
@@ -509,6 +746,10 @@ export default function AppLayout({ children }) {
 
         }
 
+        /* ============================================================
+           SMALL PHONE
+           ============================================================ */
+
         @media (max-width: 480px) {
 
           .antimate-main {
@@ -522,6 +763,29 @@ export default function AppLayout({ children }) {
             font-size: 19px;
           }
 
+          .antimate-sidebar-shell {
+            width: 280px;
+          }
+
+        }
+
+        /* ============================================================
+           VERY SMALL PHONE
+           ============================================================ */
+
+        @media (max-width: 360px) {
+
+          .antimate-sidebar-shell {
+            width: 270px;
+          }
+
+          .antimate-main {
+            padding:
+              16px
+              11px
+              24px;
+          }
+
         }
 
         /* ============================================================
@@ -530,11 +794,10 @@ export default function AppLayout({ children }) {
 
         @media (prefers-reduced-motion: reduce) {
 
-          *,
-          *::before,
-          *::after {
+          .antimate-sidebar-shell,
+          .antimate-sidebar-overlay,
+          .antimate-app-body {
             transition: none !important;
-            animation: none !important;
           }
 
         }
